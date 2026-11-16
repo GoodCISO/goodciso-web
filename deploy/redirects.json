@@ -68,22 +68,22 @@
       },
       {
         "from": "/blog/what-we-learned-building-agentic-security-workflows.html",
-        "to": "/insights",
+        "to": "/insights/what-we-learned-building-agentic-security-workflows",
         "status": 301
       },
       {
         "from": "/blog/2026-06-08-container-security-gap-nobody-talks-about.html",
-        "to": "/insights",
+        "to": "/insights/container-security-gap",
         "status": 301
       },
       {
         "from": "/blog/2026-06-08-why-llm-threat-models-fail.html",
-        "to": "/insights",
+        "to": "/insights/why-llm-threat-models-fail",
         "status": 301
       },
       {
         "from": "/blog/2026-06-08-devsecops-dead-long-live-devops.html",
-        "to": "/insights",
+        "to": "/insights/devsecops-is-dead",
         "status": 301
       },
       {

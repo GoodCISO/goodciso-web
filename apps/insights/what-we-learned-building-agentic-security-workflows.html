@@ -1,0 +1,86 @@
+
+<section class="gc-hero gc-hero-sm">
+  <div class="gc-container gc-container-narrow">
+    <span class="gc-eyebrow">Insight</span>
+    <h1>What We Learned Building Agentic Security Workflows</h1>
+    <p class="gc-hero-sub">Technical writing from the GoodCISO team.</p>
+  </div>
+</section>
+<section class="gc-section">
+  <div class="gc-container gc-container-narrow">
+    <div class="gc-prose">
+The cybersecurity industry has a habit of solving yesterday's problems. We build impressive defenses against known attack patterns, publish frameworks that age before they're adopted, and treat every new paradigm as a variation of the old one.
+
+**Agentic AI is not a variation of the old one.**
+
+When we started building [https://github.com/GoodCISO/aware](https://github.com/GoodCISO/aware)AWARE, our open-source compliance infrastructure for autonomous AI agents, we thought we knew what we were getting into. We had deep experience in cloud security, DevSecOps, and enterprise architecture. We'd secured critical national infrastructure, payment gateways, and financial systems.
+
+None of that fully prepared us for the agentic security problem.
+
+Here's why: traditional software does what it's told. Agentic software *decides* what to do. That changes everything.
+
+## Lesson 1: Constraints Before Capabilities
+
+In traditional systems, you provision access and then audit what happens. With autonomous agents, that sequence is inverted. Every agent identity must have its policy boundaries, its constraints, defined *before* it's allowed to act.
+
+We built AWARE around this principle using a tiered constraint model (T0 through T4), where each level represents a different class of restriction: from cryptographic identity requirements through to operational behavioural limits.
+
+The insight: **you can't audit your way out of a design problem.** Constraints must be architectural, not procedural.
+
+## Lesson 2: Identity Is the Perimeter
+
+In a world where agents can compose, delegate, and act across systems, the traditional network perimeter is meaningless. The only reliable perimeter is identity.
+
+Every agent in AWARE carries a cryptographic identity. Every action is attributable. Every decision chain is traceable.
+
+This isn't just good practice, it's what separates real security from security theatre. If you can't prove which agent did what, when, and under which authority, you don't have a security posture. You have a hope-based strategy.
+
+## Lesson 3: Human Approval Doesn't Scale
+
+A common response to agentic risk is: "Put a human in the loop." This sounds responsible. It is, as a last resort. As a primary control in high-volume agentic workflows, it breaks.
+
+Human-in-the-loop doesn't scale. It creates bottlenecks that organisations work around, which creates shadow processes that are *less* secure than no process at all.
+
+The better approach: design systems where autonomous agents can only make the right decisions. Not by trusting them. By *constraining* them so that wrong decisions are impossible.
+
+This is what the T0-T4 model achieves, it doesn't ask agents to be good. It constrains them at the infrastructure level so that policy violations are caught before execution, not after.
+
+## Lesson 4: Open Source Builds Trust
+
+Publishing AWARE as open-source was a deliberate choice. Not because we think every organisation should run our code. Because we believe the patterns for governing autonomous agents should be visible, auditable, and improvable by the community.
+
+If you're building security technology in secret, you're asking users to trust you. If you're building it in the open, you're letting them verify.
+
+**Trust through verification.** That's the only kind of trust that matters in security.
+
+## Lesson 5: The Threat Model Evolves Faster Than the Frameworks
+
+AI agents reason. They adapt. They compose new behaviours from existing capabilities. This means the threat model for an agentic system isn't static, it evolves with every new agent capability, every new integration, every new prompt pattern.
+
+Traditional threat modelling frameworks (STRIDE, attack trees, kill chains) assume a fixed system surface. Agentic systems don't have a fixed surface.
+
+We had to build a threat model that reasons about reasoning, one that treats agent capability evolution as a variable, not a constant. That's what AWARE's T0-T4 constraint engine does: it evaluates policy at execution time, not design time.
+
+## Where This Goes
+
+Agentic AI security is still emerging. The frameworks are incomplete. The best practices are still being written.
+
+We open-sourced it because the community needs a starting point, not a whitepaper. Something concrete, not theoretical. A reference implementation that demonstrates what agentic governance looks like in practice.
+
+If you're working on AI security, agent orchestration, or AI governance, open an issue on GitHub or message me directly on LinkedIn. The code is there. The conversation is open.
+
+## See AWARE decide for itself
+
+The live demo runs the AWARE policy engine in your browser, on a tool call you can read. Bring your own scenario to a 30-minute call and we will run it against your case.
+
+[/demo](/demo)See the policy engine →
+[/book.html](/book.html)Book a Demo
+
+*Good CISO is building the security layer autonomous AI has been missing. Follow us on [https://linkedin.com/company/good-ciso](https://linkedin.com/company/good-ciso)LinkedIn or reach out at [https://goodciso.org](https://goodciso.org)goodciso.org.*
+    </div>
+    <div class="gc-callout gc-mt-12">
+      <strong>Talk to us about this</strong>
+      If this raises a question about your own environment, <a href="/contact">start a conversation</a>.
+    </div>
+  </div>
+</section>

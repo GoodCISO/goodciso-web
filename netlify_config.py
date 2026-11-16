@@ -30,10 +30,10 @@ CORPORATE_REDIRECTS = [
     ("/aws-monitor/calculator/", "/services/security-architecture", 301),
     ("/security-policy.html", "/about", 301),
     ("/blog/", "/insights", 301),
-    ("/blog/what-we-learned-building-agentic-security-workflows.html", "/insights", 301),
-    ("/blog/2026-06-08-container-security-gap-nobody-talks-about.html", "/insights", 301),
-    ("/blog/2026-06-08-why-llm-threat-models-fail.html", "/insights", 301),
-    ("/blog/2026-06-08-devsecops-dead-long-live-devops.html", "/insights", 301),
+    ("/blog/what-we-learned-building-agentic-security-workflows.html", "/insights/what-we-learned-building-agentic-security-workflows", 301),
+    ("/blog/2026-06-08-container-security-gap-nobody-talks-about.html", "/insights/container-security-gap", 301),
+    ("/blog/2026-06-08-why-llm-threat-models-fail.html", "/insights/why-llm-threat-models-fail", 301),
+    ("/blog/2026-06-08-devsecops-dead-long-live-devops.html", "/insights/devsecops-is-dead", 301),
     # These three exist on the new site under clean paths, so the .html
     # variants 301 to them rather than to something else.
     ("/contact.html", "/contact", 301),

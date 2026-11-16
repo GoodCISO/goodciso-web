@@ -17,6 +17,7 @@ import sys
 sys.path.insert(0, str(ROOT / "apps"))
 from aware.pages import NAV as AWARE_NAV, FOOTER as AWARE_FOOTER, TAGLINE as AWARE_TAGLINE, PAGES as AWARE_PAGES
 from other import C_NAV, C_FOOTER, C_TAGLINE, CORPORATE
+from insights_loader import INSIGHT_PAGES
 from other import D_NAV, D_FOOTER, D_TAGLINE, DOCS
 from other import M_NAV, M_FOOTER, M_TAGLINE, DEMO
 
@@ -195,7 +196,7 @@ def main():
 
     page_sets = {
         "aware": AWARE_PAGES,
-        "corporate": CORPORATE,
+        "corporate": CORPORATE + INSIGHT_PAGES,
         "docs": DOCS,
         "demo": DEMO,
     }

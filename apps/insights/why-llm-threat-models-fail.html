@@ -1,0 +1,144 @@
+
+<section class="gc-hero gc-hero-sm">
+  <div class="gc-container gc-container-narrow">
+    <span class="gc-eyebrow">Insight</span>
+    <h1>Why LLM Threat Models Fail (And How to Fix Them)</h1>
+    <p class="gc-hero-sub">Technical writing from the GoodCISO team.</p>
+  </div>
+</section>
+<section class="gc-section">
+  <div class="gc-container gc-container-narrow">
+    <div class="gc-prose">
+In September 2025, I used STRIDE GPT, an AI-powered threat modelling tool, to analyse a browser-based game built entirely by an AI code editor. The tool, running on a lightweight open-source model (Gemma 3n E4B), generated a comprehensive threat model, attack trees, DREAD risk scores, and Gherkin test cases in under an hour.
+
+It was impressive. It was also incomplete.
+
+Because STRIDE GPT, like every traditional threat modelling framework, was designed for systems that do what they're told. LLM-powered systems don't. They reason. They adapt. They compose new behaviours from existing capabilities. And that means the threat model for an LLM system isn't static, it evolves with every prompt, every fine-tuning run, every new integration.
+
+Here's what I learned, and what we're doing about it at Good CISO.
+
+## The STRIDE Problem
+
+STRIDE (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege) has been the gold standard for threat modelling since Microsoft introduced it in the late 1990s. It works brilliantly for traditional software: identify the assets, map the data flows, apply the categories, score the risks, implement controls.
+
+But STRIDE assumes a fixed system surface. It assumes you can enumerate the components, define the trust boundaries, and predict the attack vectors before the system is deployed.
+
+LLMs don't have a fixed surface. Their "surface" is the prompt space, an effectively infinite, unenumerable set of inputs that can elicit behaviours the designers never intended. You can't map that. You can't put a trust boundary around it. And you certainly can't predict every malicious input.
+
+## Where Traditional Threat Models Break Down
+
+**1. Prompt Injection Isn't a STRIDE Category**
+
+STRIDE asks: who can spoof an identity? Tamper with data? Repudiate an action?
+
+Prompt injection asks: can an attacker manipulate the system by talking to it?
+
+There is no STRIDE category for "the attacker convinces the model to ignore its instructions." There is no data flow diagram that captures the cognitive boundary between a prompt and the model's reasoning process. Traditional threat modelling treats input validation as a control. But with LLMs, the input *is* the logic. You can't sanitise it without destroying the system's purpose.
+
+**2. The Attack Surface Is the Prompt Space**
+
+Traditional attack surfaces are enumerable: ports, APIs, endpoints, files. You can scan them, segment them, monitor them.
+
+The LLM attack surface is linguistic. It includes every possible string that could elicit a harmful, unauthorized, or unexpected output. That surface expands every time the model is fine-tuned, every time a new integration is added, every time the system prompt is modified.
+
+You can't vulnerability-scan a prompt space. You can't pen-test infinity.
+
+**3. Emergent Behaviors Can't Be Predicted**
+
+Traditional threat modelling assumes you can enumerate threats *before* they happen. You analyse the architecture, identify the weaknesses, and implement controls.
+
+LLMs exhibit emergent behaviours. Capabilities appear at scale that weren't present in smaller models. Fine-tuning for one task can improve or degrade performance on unrelated tasks in unpredictable ways. A model that was safe yesterday might be jailbroken today because someone discovered a new prompt pattern.
+
+You can't threat-model emergent behaviour. You can only monitor for it and constrain the environment so that emergence doesn't lead to harm.
+
+## What We Actually Need: A New Framework
+
+At Good CISO, we've been working on a complement to traditional threat modelling, not a replacement, but an extension that reasons about reasoning.
+
+The core principles:
+
+**1. Assume the Model Can Be Compromised**
+
+Traditional threat modelling assumes you can protect the system from external attackers. LLM threat modelling must assume the model itself can be turned into an attacker, via prompt injection, jailbreaking, or training data poisoning.
+
+This shifts the security boundary from "keep attackers out" to "limit damage when the model is compromised."
+
+**2. Constraints, Not Controls**
+
+Controls are reactive: detect the attack, block the input, log the event. They work when you can enumerate the threats.
+
+Constraints are proactive: define what the system *cannot* do, regardless of the input. This is the principle behind AWARE's T0-T4 constraint model. Every agent has a non-human identity with a hashed, revocable credential. Every action is bounded by policy. Even if the model is compromised, it can't exceed its constraints.
+
+**3. Monitor the Reasoning, Not Just the Output**
+
+Traditional security monitoring looks at inputs and outputs. Did the user send a malicious payload? Did the system return sensitive data?
+
+LLM security monitoring must look at the reasoning chain. What tools did the agent decide to use? What context did it retrieve? What intermediate steps led to the final output?
+
+This is why AWARE traces every decision chain. Not just for compliance, but for forensic analysis when something goes wrong.
+
+**4. Threat Model the Integration, Not Just the Model**
+
+An LLM in isolation is rarely dangerous. An LLM with access to your CRM, your code repository, and your production infrastructure is a different story.
+
+The real threat surface isn't the model, it's the integration. Every tool the model can call, every API it can access, every system it can modify: that's where the damage happens. Threat modelling must focus on the blast radius, not the prompt.
+
+## What This Looks Like in Practice
+
+When we threat-model an LLM-powered system at Good CISO, we run three parallel analyses:
+
+**Traditional STRIDE** on the infrastructure: the API gateway, the authentication layer, the data stores, the network segmentation. This hasn't changed.
+
+**LLM-specific analysis** on the prompt space: what injection vectors exist, what jailbreak patterns have been demonstrated on similar models, what data leakage risks are present in the training context.
+
+**Agentic constraint analysis** on the integration: if the model is compromised, what can it actually do? Which systems can it access? Which data can it exfiltrate? Can it escalate privileges, modify infrastructure, or access sensitive records?
+
+The third analysis is the one that matters most, and it's the one that traditional frameworks completely miss.
+
+## The Fix: AWARE's Approach
+
+AWARE isn't a threat modelling tool. It's a control plane that makes LLM threat modelling manageable by reducing the problem space.
+
+By issuing a non-human identity with a hashed, revocable credential to every agent, policy evaluation on every tool call, and full decision-chain traceability, AWARE transforms the problem from "what could an attacker make the model do?" to "what is the model physically capable of doing?"
+
+The first question is unanswerable. The second is enforceable.
+
+That's the shift from threat modelling to constraint architecture. And it's the only approach that scales with autonomous AI.
+
+## What Engineering Teams Should Do Now
+
+If you're running LLM-powered systems in production, here's the minimum viable security posture:
+
+1. **Run dual threat models**: STRIDE on the infrastructure, LLM-specific analysis on the prompt and integration space.
+
+2. **Assume compromise**: Design your controls so that a compromised model can't cause catastrophic harm. Limit tool access, enforce least-privilege, and never give an LLM direct access to production without human gating for destructive actions.
+
+3. **Trace everything**: Log not just the input and output, but the reasoning chain. What tools were called, what data was retrieved, what decisions were made. This is your forensic trail when things go wrong.
+
+4. **Test with adversarial prompts**: Don't rely on the model's safety training. Run red-team exercises with known jailbreak patterns, injection techniques, and roleplay attacks. The OWASP Top 10 for LLM Applications is a good starting point.
+
+5. **Constrain the environment**: Use a control plane like AWARE to enforce hard boundaries on what agents can do, regardless of their reasoning. Cryptographic identity, policy enforcement, and traceability are non-negotiable for autonomous systems.
+
+## The Bottom Line
+
+STRIDE, DREAD, and attack trees remain essential for the infrastructure layer. But they're insufficient for LLM-powered systems because the threat isn't in the data flow, it's in the reasoning flow.
+
+The frameworks we need for 2026 must reason about reasoning. They must model the emergent, the unenumerable, and the unpredictable. And they must shift from "detect and block" to "constrain and trace."
+
+That's what we're building with AWARE. And it's what every organisation deploying autonomous AI will need, whether they build it themselves or adopt a standard.
+
+## See AWARE decide for itself
+
+AWARE is the open-source compliance infrastructure for autonomous AI agents. T0-T4 constraint enforcement, cryptographic identity, and autonomous governance.
+
+[/demo](/demo)See the policy engine →
+[/book.html](/book.html)Book a Demo
+
+*Good CISO is building the security layer autonomous AI has been missing. Follow us on [https://linkedin.com/company/good-ciso](https://linkedin.com/company/good-ciso)LinkedIn or reach out at [https://goodciso.org](https://goodciso.org)goodciso.org.*
+    </div>
+    <div class="gc-callout gc-mt-12">
+      <strong>Talk to us about this</strong>
+      If this raises a question about your own environment, <a href="/contact">start a conversation</a>.
+    </div>
+  </div>
+</section>

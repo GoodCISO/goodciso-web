@@ -1,0 +1,114 @@
+
+<section class="gc-hero gc-hero-sm">
+  <div class="gc-container gc-container-narrow">
+    <span class="gc-eyebrow">Insight</span>
+    <h1>DevSecOps is Dead; Long Live DevOps</h1>
+    <p class="gc-hero-sub">Technical writing from the GoodCISO team.</p>
+  </div>
+</section>
+<section class="gc-section">
+  <div class="gc-container gc-container-narrow">
+    <div class="gc-prose">
+I told everyone I spoke to in 2017 that "what took DevOps 10 years, will only take DevSecOps 3–5 years."
+
+I was wrong.
+
+It took less than that for the industry to realise something I had been arguing all along: **DevSecOps was never a separate thing. It was just DevOps, done properly.**
+
+The debate is over. The practitioners have won. And now, in 2026, a new shift is underway, one that makes the old DevSecOps argument look quaint.
+
+## The Original Sin: Treating Security as a Specialisation
+
+Back in 2017, I was designing DevSecOps adoption programmes and building the DevSecOps Guild at Sage. The strategy was simple: bring Dev, DevOps, and SecOps together around a common goal,**shorten the feedback loop** from operators and security back to developers.
+
+The diagram I used then is still relevant. Security doesn't belong at the end of the pipeline. It belongs at every commit, every build, every deployment. But here's what I didn't articulate clearly enough at the time: this isn't "shifting security left." It's recognising that **security is an operational requirement, just like uptime, latency, or resilience.**
+
+When you treat security as a separate function that needs its own acronym, you perpetuate the silo. When you embed it into the software lifecycle as a first-class concern, the acronym dissolves, and what remains is just good engineering.
+
+## Why DevSecOps Lost the Brand War
+
+Fast forward to 2026, and you'll struggle to find job titles with "DevSecOps" in them at forward-thinking companies. The roles haven't disappeared. The responsibilities haven't shrunk. They've just been absorbed into platform engineering, site reliability, and software delivery, where they always belonged.
+
+The death of DevSecOps as a distinct label isn't a failure. It's a success. It means:
+
+• **Security scanning happens in CI/CD by default**, not by exception
+
+• **Threat modelling is part of design review**, not an afterthought
+
+• **Compliance is automated and continuous**, not a quarterly panic
+
+• **Developers own security outcomes**, not a separate "security team"
+
+These aren't DevSecOps achievements. They're DevOps achievements. The prefix was always redundant.
+
+## The New Shift: From Shifting Left to Constraining Autonomy
+
+But 2026 brings a challenge that makes the DevSecOps debate feel like ancient history.
+
+**Autonomous AI agents are now writing, deploying, and operating code.**
+
+When I wrote the original "DevSecOps is Dead" article in December 2020, the idea that software would *decide* what to deploy, *reason* about infrastructure changes, and *compose* new capabilities without human review was science fiction. Today, it's production reality for thousands of organisations.
+
+This changes the security problem fundamentally.
+
+Shifting security "left" assumes a human in the loop. It assumes a developer writes code, a pipeline scans it, and an operator approves deployment. With autonomous agents, there is no human in the loop for most decisions. The agent writes the code, tests it, deploys it, and monitors it, iteratively, continuously, and at machine speed.
+
+You cannot "shift left" into an autonomous loop. You need something different.
+
+## Constraints Before Capabilities: The Agentic Security Model
+
+At Good CISO, we spent the last year building [https://github.com/GoodCISO/aware](https://github.com/GoodCISO/aware)AWARE, an open-source security control plane for autonomous AI agents. The core insight that drove its design is the same one that killed DevSecOps: **you can't inspect your way out of a design problem.**
+
+With autonomous agents, traditional security controls break down:
+
+• **Code review?** The agent wrote 10, 000 lines while you were in a meeting.
+
+• **Penetration testing?** The agent deployed three new services since your last scan.
+
+• **Human approval?** Creates a bottleneck that organisations work around, creating shadow processes that are *less* secure than no process at all.
+
+The answer isn't more gates. It's **constraints**.
+
+AWARE uses a tiered constraint model (T0 through T4) where every agent identity carries cryptographic proof, every action is attributable, and every decision chain is traceable. The agent doesn't ask for permission. It operates within boundaries that make wrong decisions structurally impossible.
+
+This is the logical extension of "shift left", except now we're not shifting security into the human workflow. We're **embedding it into the agent's operating environment**.
+
+## What This Means for Engineering Leaders
+
+If you're leading platform or engineering teams in 2026, here's the shift I see happening:
+
+**From pipelines to control planes.** Your CI/CD pipeline still matters, but it's no longer the primary security boundary. The boundary is the agent's identity, its constraints, and the policies that govern what it can touch.
+
+**From shift-left to constrain-everywhere.** Security isn't a phase in the lifecycle anymore. It's the ground the agent operates on. Every API call, every infrastructure change, every data access, constrained by policy, not reviewed by a human.
+
+**From DevSecOps to AgentSecOps?** I hope not. Please, not another acronym. What we need isn't a new prefix. What we need is the same mindset that killed DevSecOps: **security as a first-class property of the system, not a function layered on top.**
+
+## The Lesson That Keeps Repeating
+
+The DevSecOps story and the agentic security story share the same moral: **specialisation creates silos, and silos create vulnerabilities.**
+
+When we treated security as separate from development and operations, we got handoffs, delays, and gaps. When we treat agent governance as separate from agent capability, we'll get the same thing, except at machine speed, which means machine-speed failures.
+
+The answer, then and now, is integration. Not as a process. As architecture.
+
+## Where We Go From Here
+
+AWARE is our contribution to this next chapter. It's open-source because the patterns for governing autonomous agents should be visible, auditable, and improvable by the community . Not locked behind a vendor's API.
+
+If you're building with autonomous agents, running agentic workflows, or simply trying to understand what secure AI operations looks like in practice, the code is on GitHub and the conversation is open.
+
+## See AWARE decide for itself
+
+AWARE is the open-source compliance infrastructure for autonomous AI agents. T0-T4 constraint enforcement, cryptographic identity, and autonomous governance.
+
+[/demo](/demo)See the policy engine →
+[/book.html](/book.html)Book a Demo
+
+*Good CISO is building the security layer autonomous AI has been missing. Follow us on [https://linkedin.com/company/good-ciso](https://linkedin.com/company/good-ciso)LinkedIn or reach out at [https://goodciso.org](https://goodciso.org)goodciso.org.*
+    </div>
+    <div class="gc-callout gc-mt-12">
+      <strong>Talk to us about this</strong>
+      If this raises a question about your own environment, <a href="/contact">start a conversation</a>.
+    </div>
+  </div>
+</section>

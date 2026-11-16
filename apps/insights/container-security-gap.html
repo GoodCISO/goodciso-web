@@ -1,0 +1,126 @@
+
+<section class="gc-hero gc-hero-sm">
+  <div class="gc-container gc-container-narrow">
+    <span class="gc-eyebrow">Insight</span>
+    <h1>The Container Security Gap Nobody Talks About</h1>
+    <p class="gc-hero-sub">Technical writing from the GoodCISO team.</p>
+  </div>
+</section>
+<section class="gc-section">
+  <div class="gc-container gc-container-narrow">
+    <div class="gc-prose">
+I've been running containerised workloads in production since 2015. Docker, Kubernetes, ECS, GKE, OpenShift, I've seen them all. And I've reviewed the security posture of hundreds of container deployments across startups, scale-ups, and enterprises.
+
+Here's what I've learned: **the container security industry is obsessed with the wrong things.**
+
+We have excellent tools for scanning images for CVEs. We have admission controllers that block vulnerable containers. We have runtime security products that detect anomalous behaviour. These are all useful. They're also all solving problems that, while real, are not the problems that cause catastrophic breaches.
+
+The real container security gaps are architectural. They're invisible to scanners. And almost nobody talks about them.
+
+## Gap 1: The Network Mesh Is a Flattened Network
+
+In a traditional data centre, you segment by function. Web servers in one VLAN. Databases in another. Management interfaces on a separate network entirely. Access between segments is controlled by firewalls with explicit rules.
+
+In Kubernetes, the default network model is flat. Every pod can talk to every other pod. Service meshes add encryption and authentication, but they don't solve the fundamental problem: **if an attacker compromises a single pod, the blast radius is the entire cluster.**
+
+Service meshes like Istio and Linkerd are excellent for east-west traffic security. But they require explicit configuration to enforce segmentation. Most teams never do it. They install the mesh, get mTLS between services, and declare victory, while every compromised pod still has unrestricted access to the API server, the metadata service, and every other workload in the namespace.
+
+**The fix:** Network policies are not optional. They should be defined as part of the workload specification, enforced at deploy time, and audited continuously. If a pod doesn't have an explicit network policy, it shouldn't run. Period.
+
+## Gap 2: Identity Is An Afterthought
+
+Containers are ephemeral. They spin up, do work, and disappear. This makes traditional identity management, user accounts, credentials, access tokens, fundamentally mismatched with how containers actually work.
+
+The industry solution is service accounts. Kubernetes service accounts, IAM roles, SPIFFE/SPIRE. These are better than nothing. But they create a new problem: **the identity is bound to the deployment, not the workload.** If I compromise your deployment pipeline, I get your identity. If I compromise your node, I get every identity running on that node.
+
+The deeper issue is that most container workloads don't have identities at all. They run as "default" service accounts with broad permissions. They inherit node IAM roles. They use shared secrets mounted as volumes that every pod in the namespace can read.
+
+**The fix:** Every workload needs a cryptographic identity that is independent of the infrastructure. SPIFFE/SPIRE is the right direction, but it needs to be mandatory, not optional. At Good CISO, we're applying the same cryptographic identity model we use for AI agents ([https://github.com/GoodCISO/aware](https://github.com/GoodCISO/aware)AWARE) to container workloads, because the principle is the same: identity must be workload-bound, not node-bound.
+
+## Gap 3: The Supply Chain Is a Supply Tree (And Nobody Prunes It)
+
+Everyone knows about software supply chain risks. The SolarWinds and xz Utils incidents made sure of that. We scan base images, sign containers, and use SLSA attestations. These are good practices.
+
+But the container supply chain is deeper than the image. Consider what actually runs in your cluster:
+
+• The base image (scanned, hopefully)
+
+• The application dependencies (maybe scanned)
+
+• The sidecar containers (often ignored, Istio, Fluentd, monitoring agents)
+
+• The init containers (frequently skipped in scanning)
+
+• The node operating system (rarely audited)
+
+• The kernel (almost never reviewed)
+
+• The container runtime (who's running the latest containerd?)
+
+• The orchestrator control plane (when did you last audit your Kubernetes API server configuration?)
+
+Each of these is a separate supply chain. Each has its own vendors, its own update cycles, its own vulnerabilities. The container security model, scan the image, deploy the image, addresses only the first layer.
+
+**The fix:** Supply chain security for containers must be recursive. You need visibility into every layer of the stack, from the application to the kernel. You need update policies that don't stop at the image. And you need to treat the control plane as a first-class security surface, not just infrastructure that someone else manages.
+
+## Gap 4: Observability Ends at the Container Boundary
+
+Modern observability is excellent for detecting anomalies. We have metrics, logs, traces, and eBPF-based runtime security tools. We can detect a container that suddenly starts making outbound connections, or a process that spawns unexpected children.
+
+But what we can't easily detect is what I call **"cross-container contamination"**: when a compromised container manipulates shared resources that affect other workloads. A container that modifies a shared ConfigMap. A sidecar that intercepts traffic for multiple services. A DaemonSet that runs on every node with privileged access.
+
+The container boundary is a fiction. Containers share kernels, network namespaces, and storage volumes. The security model assumes isolation, but the implementation is porous.
+
+**The fix:** Assume containers are not isolated. Design for containment, not isolation. Shared resources should be immutable or versioned. Privileged containers should be eliminated, not minimised. And runtime security must monitor cross-container interactions, not just intra-container behaviour.
+
+## Gap 5: Security Is Still a Phase, Not a Property
+
+Despite a decade of DevOps and DevSecOps, most container security is still a phase in the lifecycle. Security scanning happens in CI/CD. Runtime detection happens in production. Remediation happens in a separate ticket system.
+
+The gap is not technological. It's architectural. Security is not embedded in the platform; it's layered on top of it. The security team reviews deployments. The platform team manages infrastructure. The application team writes code. Three teams, three tools, three timelines.
+
+This works for static systems. It fails for containers, which are dynamic, distributed, and ephemeral. By the time a security ticket is triaged, the container it references has been destroyed and replaced three times.
+
+**The fix:** Security must be a property of the platform, not a process applied to it. Policies should be enforced at the API server, not reviewed in a dashboard. Violations should block deployments, not generate tickets. And security teams must have the same access to platform controls as the platform teams, not read-only access to logs, but the ability to define and enforce policy.
+
+## What This Looks Like in Practice
+
+At Good CISO, when we review a container security programme, we look for five things:
+
+1. **Zero-trust networking:** Network policies are mandatory, default-deny, and defined as code alongside the workload.
+
+2. **Workload-bound identity:** Every service has a cryptographic identity that is independent of the node and the deployment pipeline. No shared service accounts. No node IAM roles.
+
+3. **Recursive supply chain visibility:** Scanning covers base images, application dependencies, sidecars, init containers, and the node OS. The control plane is audited as a first-class security surface.
+
+4. **Containment-oriented runtime:** Assume containers are porous. Shared resources are immutable. Privileged access is eliminated. Cross-container interactions are monitored.
+
+5. **Policy-as-code enforcement:** Security policies are defined, versioned, and enforced by the platform. Violations block deployment. There is no separate security review phase.
+
+These are not product features. They are architectural principles. And they require changes to how teams design, build, and operate container platforms, not just better scanning tools.
+
+## The Bigger Picture
+
+The container security gap is part of a larger pattern: security is still treated as a function layered on top of infrastructure, rather than a property embedded within it. This was the problem with DevSecOps. It's the problem with container security now. And it's the problem with AI security that's emerging.
+
+The solution is the same in every case: move from inspection to architecture. From scanning to constraints. From security as a process to security as a design property.
+
+That's what we built [https://github.com/GoodCISO/aware](https://github.com/GoodCISO/aware)AWARE for, not because containers and AI agents are the same, but because the security principle is the same. Every workload needs a cryptographic identity. Every action needs policy boundaries. Every decision needs to be traceable.
+
+Whether you're running Kubernetes clusters or autonomous AI agents, the fundamentals don't change. The implementation does.
+
+## See AWARE decide for itself
+
+AWARE is the open-source compliance infrastructure for autonomous AI agents. T0-T4 constraint enforcement, cryptographic identity, and autonomous governance.
+
+[/demo](/demo)See the policy engine →
+[/book.html](/book.html)Book a Demo
+
+*Good CISO is building the security layer autonomous AI has been missing. Follow us on [https://linkedin.com/company/good-ciso](https://linkedin.com/company/good-ciso)LinkedIn or reach out at [https://goodciso.org](https://goodciso.org)goodciso.org.*
+    </div>
+    <div class="gc-callout gc-mt-12">
+      <strong>Talk to us about this</strong>
+      If this raises a question about your own environment, <a href="/contact">start a conversation</a>.
+    </div>
+  </div>
+</section>
