@@ -26,22 +26,41 @@
 ```
 git push to main
       │
-      ├─► GitHub Actions (.github/workflows/deploy.yml)
-      │     ├─ build_all.py       → dist/{aware,corporate,docs,demo}
-      │     ├─ netlify_config.py  → netlify.toml + redirects per site
-      │     ├─ qa.py              → link/heading/metadata/sitemap gate
-      │     └─ (passes) → POST 4 Netlify build hooks
-      │                          │
-      │                          ▼
-      │                   Netlify rebuilds each site
-      │                          │
-      │                          ▼
-      │                   verify_production.py  → TLS, headers, sitemap
+      ▼
+launchd: ai.goodciso-web-deploy  (every 5 minutes)
       │
-      └─► Cloudflare DNS already points the three subdomains at Netlify
+      └─► deploy_watcher.py
+            ├─ read main's commit SHA from the GitHub API
+            ├─ compare with deploy/state.json
+            ├─ (unchanged) → exit, nothing happens
+            └─ (changed) →
+                 ├─ build_all.py       → dist/{aware,corporate,docs,demo}
+                 ├─ netlify_config.py  → netlify.toml + redirects per site
+                 ├─ qa.py              → link/heading/metadata/sitemap gate
+                 ├─ deploy.py --site X → Netlify deploy, per site
+                 └─ verify_production.py → TLS, headers, sitemap, every URL
 ```
 
-The QA gate runs **before** any hook is triggered. A build that breaks a link, drops a heading, or loses a canonical URL does not reach production.
+The QA gate runs **before** any deploy. A build that breaks a link, drops a heading, or loses a canonical URL does not reach production.
+
+### Why a host-side watcher rather than GitHub Actions
+
+This is a constraint, not a preference, and it is worth understanding before changing it.
+
+The GitHub PAT on this host has the `repo` scope but **not** `workflow`. GitHub refuses to create or update anything under `.github/workflows/` with such a token: the git push is rejected with an explicit scope message, and the contents API returns a deliberate `404` rather than `403`. Netlify's own GitHub integration is also unavailable — the production site is linked to a GitHub App installation on the personal `alvin-chang/website` account, and installing that App on the GoodCISO organisation requires an interactive OAuth authorisation that a scheduled job cannot perform.
+
+So the CI lives on this host. `deploy_watcher.py` does the same job a workflow would: it detects that `main` has moved, builds, gates on QA, deploys only what changed, and re-verifies production.
+
+The Actions workflow is kept at **`ci/deploy.yml`** with a header explaining how to switch to it. To switch: move it to `.github/workflows/deploy.yml` using a token with the `workflow` scope, and confirm the four `NETLIFY_BUILD_HOOK_*` secrets are set on the repository.
+
+### Running a deploy by hand
+
+```bash
+cd /Users/alfie/projects/goodciso-web
+python3.12 deploy_watcher.py --check   # report only, change nothing
+python3.12 deploy_watcher.py           # deploy if main has moved
+python3.12 deploy_watcher.py --force   # deploy regardless
+```
 
 ---
 
@@ -50,6 +69,8 @@ The QA gate runs **before** any hook is triggered. A build that breaks a link, d
 **Names only. No secret values are recorded here or in the repository.**
 
 ### GitHub repository secrets
+
+Registered and secret-backed, and currently unused — the active CI is the host-side watcher. They exist so that switching to GitHub Actions needs no Netlify change.
 
 | Name | Purpose |
 |---|---|
@@ -85,13 +106,17 @@ Existing records (MX, SPF, DMARC, DKIM, CAA, MTA-STS, TLSRPT) were **not modifie
 
 ## 5. CI/CD configuration
 
-- **Trigger:** push to `main`, or manual dispatch.
+- **Trigger:** a push to `main`, detected by `deploy_watcher.py` within 5 minutes.
+- **Scheduler:** launchd agent `ai.goodciso-web-deploy` (`~/Library/LaunchAgents/ai.goodciso-web-deploy.plist`), `StartInterval` 300s. launchd rather than cron because it survives reboot and is visible in `launchctl list`.
+- **Logs:** `~/.hermes/profiles/designer/artifacts/webdeploy.log` and `.err`.
 - **Build:** `python3.12 build_all.py` → `python3.12 netlify_config.py`.
-- **Gate:** `python3.12 qa.py` must exit 0. Currently 51 pages, 0 errors.
-- **Deploy:** four `POST`s to the Netlify build hooks. A non-2xx fails the job.
+- **Gate:** `python3.12 qa.py` must exit 0. Currently 55 pages, 0 errors.
+- **Deploy:** `python3.12 deploy.py --site <name>` for each site. A failure on one site does not block the others, and the failure is reported.
 - **Post-deploy:** `python3.12 verify_production.py` — TLS, security headers, robots, sitemap, and every sitemap URL resolves 200.
+- **Idempotence:** the watcher records the deployed SHA in `deploy/state.json`. A run with no change exits without deploying. A lock file (`deploy/watcher.lock`) prevents two overlapping runs from both deploying.
+- **Manual trigger:** `launchctl kickstart -k gui/$(id -u)/ai.goodciso-web-deploy`.
 
-The workflow publishes a build artifact (`dist/`) so a failed deploy can be diagnosed without rebuilding.
+The four Netlify build hooks remain registered and secret-backed, so switching to GitHub Actions needs no Netlify change.
 
 ---
 
@@ -194,14 +219,16 @@ The redirect table lives in `netlify_config.py` and is emitted into `deploy/redi
 
 **Not performed:** Lighthouse/CWV scoring against production, and an independent (axe) automated a11y audit. The manual and programmatic checks above are the evidence offered. A Lighthouse run and an axe sweep are the sensible next QA step.
 
+**Page count:** 55 built pages across the four sites — corporate 17, docs 19, aware 15, demo 2 (page + 404).
+
 ---
 
 ## 9. Outstanding issues
 
 1. **Resolved — the four blog posts are now published.** They were migrated into native pages at `/insights/<slug>/`, the old `/blog/*.html` URLs 301 to the articles themselves rather than to the index, and the `/insights` index links all four. The migration also runs a claim-correction pass: the posts predate the AWARE 2.12.2 README correction and contained "cryptographic identity" and T0-T4-as-enforcement-tier claims, so those sentences were rewritten to match `docs/capability-register.md`.
-2. **The contact form needs its Netlify function confirmed.** The form is marked `data-netlify="true"` with a honeypot, which Netlify handles natively. It was not submitted end-to-end against production.
-3. **The old corporate site's AWS Monitor and crypto-advisory content** (`/aws-monitor`, `/services.html` as a crypto-research page) is not carried into the new site. Those URLs redirect to the closest new equivalents, but the underlying content was a separate business line and is now absent. If it is still a live offering, it needs its own page — it was deliberately not smuggled into the new corporate narrative.
-4. **CI has not run on a push yet.** The workflow is committed and the hooks are registered and secret-backed, but the first push after this handover is its first execution. Watch that run.
+2. **The contact form was not submitted end-to-end against production.** The form is marked `data-netlify="true"` with a honeypot, which Netlify handles natively, and the markup and labels were verified — but no real submission was made, so the lead-delivery path is unproven. Submit it once from the live page before relying on it.
+3. **The old corporate site's AWS Monitor and crypto-advisory content** (`/aws-monitor`, `/services.html` as a crypto-research page) is not carried into the new site. Those URLs redirect to the closest new equivalents, but the underlying content was a separate business line and is now absent. It was deliberately not smuggled into the new corporate narrative. If it is still a live offering, it needs its own page and its own route — it is a decision, not an oversight.
+4. **CI has run end to end.** `deploy_watcher.py` was executed through the launchd agent and completed the full cycle — build, QA gate, four deploys, production verification. The Actions workflow is parked at `ci/deploy.yml` and is not active; see §2 for why, and for how to switch to it.
 5. **Resolved — blog posts migrated.** See item 1. The source fragments remain in `/Users/alfie/projects/goodciso-website/blog/` and the migration is reproducible with `python3.12 migrate_insights.py`.
 
 6. **`llms-full.txt` was never published.** A previous draft of this note listed it as a lost file — it never existed on the live site and the old build never emitted it. `llms.txt` and `agent-instructions.txt` were preserved correctly.
