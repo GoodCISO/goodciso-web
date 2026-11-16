@@ -1,0 +1,26 @@
+[
+  {
+    "key": "aware",
+    "domain": "https://aware.goodciso.org",
+    "pages": 15,
+    "dir": "/Users/alfie/projects/goodciso-web/dist/aware"
+  },
+  {
+    "key": "corporate",
+    "domain": "https://goodciso.org",
+    "pages": 12,
+    "dir": "/Users/alfie/projects/goodciso-web/dist/corporate"
+  },
+  {
+    "key": "docs",
+    "domain": "https://docs.aware.goodciso.org",
+    "pages": 19,
+    "dir": "/Users/alfie/projects/goodciso-web/dist/docs"
+  },
+  {
+    "key": "demo",
+    "domain": "https://demo.aware.goodciso.org",
+    "pages": 1,
+    "dir": "/Users/alfie/projects/goodciso-web/dist/demo"
+  }
+]

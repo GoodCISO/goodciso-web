@@ -1,0 +1,113 @@
+{
+  "corporate": {
+    "redirects": [
+      {
+        "from": "/pricing.html",
+        "to": "/services/regulatory-readiness",
+        "status": 301
+      },
+      {
+        "from": "/pricing",
+        "to": "/services/regulatory-readiness",
+        "status": 301
+      },
+      {
+        "from": "/book.html",
+        "to": "/contact",
+        "status": 301
+      },
+      {
+        "from": "/book",
+        "to": "/contact",
+        "status": 301
+      },
+      {
+        "from": "/services.html",
+        "to": "/services",
+        "status": 301
+      },
+      {
+        "from": "/demo",
+        "to": "/aware",
+        "status": 301
+      },
+      {
+        "from": "/demo/",
+        "to": "/aware",
+        "status": 301
+      },
+      {
+        "from": "/aws-monitor",
+        "to": "/services/security-architecture",
+        "status": 301
+      },
+      {
+        "from": "/aws-monitor/",
+        "to": "/services/security-architecture",
+        "status": 301
+      },
+      {
+        "from": "/aws-monitor/calculator",
+        "to": "/services/security-architecture",
+        "status": 301
+      },
+      {
+        "from": "/aws-monitor/calculator/",
+        "to": "/services/security-architecture",
+        "status": 301
+      },
+      {
+        "from": "/security-policy.html",
+        "to": "/about",
+        "status": 301
+      },
+      {
+        "from": "/blog/",
+        "to": "/insights",
+        "status": 301
+      },
+      {
+        "from": "/blog/what-we-learned-building-agentic-security-workflows.html",
+        "to": "/insights",
+        "status": 301
+      },
+      {
+        "from": "/blog/2026-06-08-container-security-gap-nobody-talks-about.html",
+        "to": "/insights",
+        "status": 301
+      },
+      {
+        "from": "/blog/2026-06-08-why-llm-threat-models-fail.html",
+        "to": "/insights",
+        "status": 301
+      },
+      {
+        "from": "/blog/2026-06-08-devsecops-dead-long-live-devops.html",
+        "to": "/insights",
+        "status": 301
+      },
+      {
+        "from": "/contact.html",
+        "to": "/contact",
+        "status": 301
+      },
+      {
+        "from": "/privacy.html",
+        "to": "/privacy",
+        "status": 301
+      },
+      {
+        "from": "/terms.html",
+        "to": "/terms",
+        "status": 301
+      }
+    ],
+    "preserved": [
+      "llms.txt",
+      "llms-full.txt",
+      "agent-instructions.txt",
+      "robots.txt",
+      "sitemap.xml"
+    ]
+  }
+}

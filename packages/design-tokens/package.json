@@ -1,0 +1,13 @@
+{
+  "name": "@goodciso/design-tokens",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Design tokens for the GoodCISO corporate site and the AWARE product site. One token source, two brand expressions.",
+  "type": "module",
+  "exports": {
+    ".": "./src/tokens.css",
+    "./tokens.css": "./src/tokens.css",
+    "./json": "./src/tokens.json"
+  },
+  "files": ["src"]
+}
