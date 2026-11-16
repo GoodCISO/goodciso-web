@@ -1,0 +1,90 @@
+# GitHub Actions deploy workflow — NOT ACTIVE.
+#
+# This file lives under ci/ rather than .github/workflows/ because the
+# GitHub token on the deploy host has the `repo` scope but not
+# `workflow`. GitHub refuses to create or update anything under
+# .github/workflows/ with such a token, so the file cannot be pushed
+# from here.
+#
+# The active CI mechanism is deploy_watcher.py, which runs on this host
+# and does the same job: build, QA gate, deploy, verify.
+#
+# To switch to GitHub Actions: move this file to .github/workflows/deploy.yml
+# with a token that carries the `workflow` scope, and ensure the four
+# NETLIFY_BUILD_HOOK_* secrets are set on the repository.
+#
+name: Deploy sites
+
+# The four sites are static. Netlify's build hooks are the deploy mechanism;
+# this workflow builds the output and tells each hook to rebuild, so a push to
+# main is a deploy and a broken build never reaches production.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build all four sites
+        run: |
+          python3.12 build_all.py
+          python3.12 netlify_config.py
+
+      - name: QA the built output
+        # Link integrity, heading structure, metadata and sitemap consistency,
+        # checked against the built output rather than the source.
+        run: python3.12 qa.py
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sites
+          path: dist/
+          retention-days: 7
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    # Only deploy when the build and the QA gate both passed.
+    steps:
+      - name: Trigger Netlify build hooks
+        env:
+          AWARE_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK_AWARE }}
+          DOCS_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK_DOCS }}
+          DEMO_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK_DEMO }}
+          CORPORATE_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK_CORPORATE }}
+        run: |
+          set -euo pipefail
+          trigger() {
+            name="$1"; url="$2"
+            if [ -z "$url" ]; then
+              echo "::notice::$name: no build hook secret set — skipped"
+              return 0
+            fi
+            code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$url")
+            echo "$name hook -> $code"
+            if [ "$code" -ge 400 ]; then
+              echo "::error::$name build hook failed with $code"
+              exit 1
+            fi
+          }
+          trigger "aware"     "$AWARE_HOOK"
+          trigger "docs"      "$DOCS_HOOK"
+          trigger "demo"      "$DEMO_HOOK"
+          trigger "corporate" "$CORPORATE_HOOK"
+
+      - name: Verify production
+        run: python3.12 verify_production.py
