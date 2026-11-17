@@ -104,10 +104,8 @@
     ],
     "preserved": [
       "llms.txt",
-      "llms-full.txt",
       "agent-instructions.txt",
-      "robots.txt",
-      "sitemap.xml"
+      "security.txt"
     ]
   }
 }

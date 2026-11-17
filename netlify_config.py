@@ -48,7 +48,11 @@ CORPORATE_REDIRECTS = [
 # The AI-agent surface on the live site is deliberate and well built. It is
 # preserved verbatim rather than rewritten — it was a deliberate, recent
 # decision and there is no reason to regress it.
-CORPORATE_PRESERVED = ["llms.txt", "llms-full.txt", "agent-instructions.txt", "robots.txt", "sitemap.xml"]
+# The AI-agent surface is part of the site and must be in the repository, not
+# copied from another checkout at build time. A CI runner has no access to
+# the previous corporate site's tree, and a file that only exists on one
+# machine is a file that silently disappears from production.
+CORPORATE_PRESERVED = ["llms.txt", "agent-instructions.txt", "security.txt"]
 
 # Netlify's deploy API does not ingest dot-directories from a zipped upload:
 # .well-known/security.txt was silently dropped from the file list. RFC 9116
@@ -57,15 +61,41 @@ CORPORATE_PRESERVED = ["llms.txt", "llms-full.txt", "agent-instructions.txt", "r
 # normal path. The file is written to /security.txt and served from there.
 SECURITY_TXT_PATH = "security.txt"
 
-BASE_HEADERS = """
+# The Content-Security-Policy is not optional. The previous site's build
+# shipped one, and a deploy that dropped it is a security regression even if
+# every page still renders.
+#
+# This site loads webfonts from Google Fonts and nothing else external: no
+# booking widget, no analytics script, no third-party embed. So the policy is
+# tight by construction. style-src needs 'unsafe-inline' because the
+# component layer sets inline styles (the grid gap, the inline CSS custom
+# properties on cards).
+CSP = (
+    "default-src 'self'; "
+    "script-src 'self'; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com; "
+    "img-src 'self' data:; "
+    "connect-src 'self'; "
+    "form-action 'self'; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "object-src 'none'"
+)
+
+BASE_HEADERS = f"""
 [[headers]]
   for = "/*"
   [headers.values]
     X-Content-Type-Options = "nosniff"
-    X-Frame-Options = "SAMEORIGIN"
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "0"
+    Content-Security-Policy = "{CSP}"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+    Permissions-Policy = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
     Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Resource-Policy = "same-origin"
 
 [[headers]]
   for = "/assets/*"
@@ -81,6 +111,16 @@ BASE_HEADERS = """
   for = "/assets/*.css"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/sitemap.xml"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/robots.txt"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
 """
 
 
@@ -125,19 +165,23 @@ def main():
         live = None
     d = DIST / "corporate"
     copied = []
+    # The AI-agent surface and security.txt live in the repository under
+    # assets/site/. They are copied from there rather than from another
+    # checkout, so a CI runner produces exactly the same site as this host.
     for f in CORPORATE_PRESERVED:
-        if live is None:
-            break
-        src = live / f
-        if src.exists() and not (d / f).exists():
+        src = ROOT / "assets" / "site" / f
+        if src.exists():
             (d / f).write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
             copied.append(f)
     # .well-known/security.txt — RFC 9116. A security company that drops its
     # own disclosure contact has a credibility problem, and security researchers
     # look for it first.
-    wk = live / ".well-known" / "security.txt"
-    if wk.exists():
-        (d / SECURITY_TXT_PATH).write_text(wk.read_text(encoding="utf-8"), encoding="utf-8")
+    # security.txt is copied from the previous corporate site when that
+    # repository is present. It is not: the file lives in the repo now, so
+    # the copy is skipped and the file in the tree is what ships.
+    sec = ROOT / "assets" / "site" / SECURITY_TXT_PATH
+    if sec.exists():
+        (d / SECURITY_TXT_PATH).write_text(sec.read_text(encoding="utf-8"), encoding="utf-8")
         copied.append(SECURITY_TXT_PATH)
     write_site("corporate", "goodciso", extra)
     print(f"[netlify] corporate: {len(CORPORATE_REDIRECTS)} redirects, preserved {copied or 'none'}")

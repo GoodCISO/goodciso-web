@@ -69,12 +69,35 @@ def check_domain(host, base):
         ok = False
 
     # 3. headers
-    missing = [h for h in REQUIRED_HEADERS if h not in {k.lower() for k in hdrs}]
+    # A deploy is not finished when the command exits 0. It is finished when
+    # production has been read back and shown to carry what was intended.
+    # The Content-Security-Policy in particular has been lost before: a
+    # deploy that shipped no CSP still exited 0 and still rendered every
+    # page, so nothing noticed. An absent CSP is a FAILED deploy.
+    present = {k.lower() for k in hdrs}
+    missing = [h for h in REQUIRED_HEADERS if h not in present]
     if missing:
         print(f"  HEADERS    MISSING: {missing}")
         ok = False
     else:
         print(f"  HEADERS    OK  (security headers present)")
+
+    csp = hdrs.get("Content-Security-Policy", "")
+    if not csp:
+        print("  CSP        FAIL  no Content-Security-Policy on production")
+        ok = False
+    else:
+        print(f"  CSP        OK   ({len(csp)} chars)")
+
+    xfo = hdrs.get("X-Frame-Options", "")
+    # SAMEORIGIN is Netlify's platform default, so SAMEORIGIN proves nothing.
+    # Only our own configured value proves our netlify.toml was applied.
+    if xfo.upper() != "DENY":
+        print(f"  X-FRAME    FAIL  X-Frame-Options is {xfo or '(absent)'}, expected DENY "
+              f"(SAMEORIGIN is the Netlify default and means our config did not land)")
+        ok = False
+    else:
+        print("  X-FRAME    OK   DENY (our config landed)")
 
     # 4. robots + sitemap
     for path in ("/robots.txt", "/sitemap.xml"):
