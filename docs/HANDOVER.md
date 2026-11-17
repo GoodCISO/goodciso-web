@@ -97,12 +97,35 @@ Every script derives the repository root from its own location, and host-only pa
 |---|---|---|
 | `~/.openclaw/credentials/netlify-goodciso.env` | `NETLIFY_AUTH_TOKEN` | `deploy.py` — the Good CISO Netlify account that owns all four sites. Overridden by the `NETLIFY_AUTH_TOKEN` environment variable when set, which is how CI uses it. |
 | `~/.openclaw/credentials/cloudflare.env` | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ZONE` | `deploy.py --dns` — DNS writes |
-| `~/.openclaw/credentials/github-goodciso-web.env` | `GITHUB_TOKEN` (repo + workflow scope) | The GitHub credential for this repository |
-| `~/.openclaw/credentials/github-pat.env` | `GITHUB_TOKEN` (repo + workflow scope) | Read at use time by the git credential helper `~/bin/git-credential-github-alvin` for github.com. The old credential is backed up beside it as `github-pat.env.bak-pre-workflow-token`. |
+| `~/.openclaw/credentials/github-pat.env` | `GITHUB_TOKEN` (repo + workflow scope) | The single source for the GitHub credential. Read at use time by the git credential helper `~/bin/git-credential-github-alvin`. Mode `0600`. The previous credential is backed up beside it as `github-pat.env.bak-pre-workflow-token`. |
 
-Both GitHub credential files are mode `0600`. The `workflow` scope on this token is what allows a push that creates or updates anything under `.github/workflows/`; without it GitHub rejects the push and the contents API returns a 404.
+The `workflow` scope on this token is what allows a push that creates or updates anything under `.github/workflows/`. Without it GitHub rejects the push with an explicit scope message and the contents API returns a 404.
 
-> **Careful with the git credential helper.** The global `credential.helper` list starts with `osxkeychain`, which serves an older github.com token from the macOS keychain. That token has no `workflow` scope, so a push touching `.github/workflows/` is rejected even though the credential file holds a good one. When pushing a workflow file, bypass the helper: `git -c credential.helper= push …` with the token in the URL, or remove the stale keychain entry.
+### How the credential reaches git
+
+There is **one** credential file, and the token never appears in a remote URL, in `.git/config`, in a process argument, or in a shell history.
+
+```
+git push
+   │
+   ├─ credential.https://github.com.helper  →  ~/bin/git-credential-github-alvin
+   │        reads ~/.openclaw/credentials/github-pat.env at use time
+   │        (the token never enters the script's argv)
+   │
+   └─ the macOS keychain holds the same secret for github.com
+            (a fallback for tools that do not use git's helper chain)
+```
+
+`osxkeychain` comes first in the global helper list, from Xcode's system gitconfig. It is backed by a keychain entry for `github.com`, and **a stale entry there silently overrides the credential file** — git never reaches the file helper, so a push touching `.github/workflows/` is rejected even though the file holds a token with the right scope. When that happened, the symptom looked like a scope problem and the real cause was a cached secret.
+
+To refresh the keychain entry after a token rotation:
+
+```bash
+security delete-internet-password -s github.com -a alvin-chang -p htps
+security add-internet-password -U -s github.com -a alvin-chang -p htps -w "<token>"
+```
+
+> **Never put the token in the remote URL.** It works, and it is tempting when a push is being rejected, but it leaves the secret in `.git/config` where it outlives the fix, in `ps` output for any process listing, and in the shell history. The credential chain above needs no such workaround — and when a push is rejected, the cause is nearly always a stale cached credential, not the URL.
 
 Token scope required on Netlify: site read/write, domain read/write, build-hook read/write, deploy read/write.
 
@@ -251,7 +274,37 @@ A real submission has still not been made, so the lead-delivery path — where t
 
 ---
 
-## 9. Outstanding issues
+## 9. Rotating the GitHub credential
+
+The token must carry both `repo` and `workflow`. `workflow` is what permits a push that creates or updates anything under `.github/workflows/`.
+
+```bash
+# 1. Write the new token to the one credential file, mode 0600
+cat > ~/.openclaw/credentials/github-pat.env <<'EOF'
+# GitHub credential — GoodCISO org and goodciso-web (repo + workflow scope).
+# Read at use time by ~/bin/git-credential-github-alvin for github.com.
+GITHUB_TOKEN=***
+EOF
+chmod 600 ~/.openclaw/credentials/github-pat.env
+
+# 2. Refresh the macOS keychain entry, which osxkeychain consults FIRST.
+#    Skipping this is the trap: git will serve the stale cached secret and
+#    the push fails with a scope error that looks like a token problem.
+security delete-internet-password -s github.com -a alvin-chang -p htps
+security add-internet-password -U -s github.com -a alvin-chang -p htps -w "<new token>"
+
+# 3. Confirm the chain serves the new token
+git credential fill <<< $'protocol=https\nhost=github.com\n'   # password must be the new one
+
+# 4. Confirm the scopes
+curl -sI -H "Authorization: Bearer <new token>" https://api.github.com/user | grep -i x-oauth-scopes
+#   -> x-oauth-scopes: repo, workflow
+
+# 5. A push that touches .github/workflows/ is the real test
+git push origin main
+```
+
+## 10. Outstanding issues
 
 1. **Resolved — the four blog posts are now published.** They were migrated into native pages at `/insights/<slug>/`, the old `/blog/*.html` URLs 301 to the articles themselves rather than to the index, and the `/insights` index links all four. The migration also runs a claim-correction pass: the posts predate the AWARE 2.12.2 README correction and contained "cryptographic identity" and T0-T4-as-enforcement-tier claims, so those sentences were rewritten to match `docs/capability-register.md`.
 2. **The contact form was not submitted end-to-end against production.** The form is marked `data-netlify="true"` with a honeypot, which Netlify handles natively, and the markup and labels were verified — but no real submission was made, so the lead-delivery path is unproven. Submit it once from the live page before relying on it.
@@ -263,7 +316,7 @@ A real submission has still not been made, so the lead-delivery path — where t
 
 ---
 
-## 10. The governing document
+## 11. The governing document
 
 **`docs/capability-register.md`** classifies every AWARE capability as IMPLEMENTED, PARTIALLY IMPLEMENTED, DEMONSTRATION, ROADMAP or UNVERIFIED, against three separate axes — does the code exist, is it wired into a runtime path, is it test-covered — and cites file and line for each claim.
 
