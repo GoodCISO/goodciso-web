@@ -19,7 +19,8 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
+import os
+import shutil
 import time
 import urllib.error
 import urllib.request
@@ -33,13 +34,39 @@ CRED = Path("/Users/alfie/.openclaw/credentials/netlify-goodciso.env")
 CF_CRED = Path("/Users/alfie/.openclaw/credentials/cloudflare.env")
 ZONE_ID = "492c93499a5fd0bb7660dfba5bec38a9"
 
+# Site ids are declared here rather than read from deploy/sites.json,
+# because that file is gitignored and CI would otherwise have no idea which
+# site to deploy to. A site id changes only if a site is deliberately
+# recreated, which is a recorded act, not a routine one.
+#
+# The corporate site is the EXISTING production site, so its live content
+# is replaced in place and a rollback stays available. See
+# deploy/rollback.json for the previous deploys.
 SITES = {
-    "aware": {"name": "aware-goodciso", "domain": "aware.goodciso.org", "dir": "aware"},
-    "docs": {"name": "aware-docs", "domain": "docs.aware.goodciso.org", "dir": "docs"},
-    "demo": {"name": "aware-playground", "domain": "demo.aware.goodciso.org", "dir": "demo"},
-    # The corporate site deploys to the EXISTING production site id, so the
-    # live content is replaced in place with a rollback available.
-    "corporate": {"name": None, "domain": "goodciso.org", "dir": "corporate", "site_id": "e7f43642-d6f1-4625-a4c9-3cfdb0525446"},
+    "aware": {
+        "name": "aware-goodciso",
+        "domain": "aware.goodciso.org",
+        "dir": "aware",
+        "site_id": "628c454e-0569-4664-a61c-792f3c0a3420",
+    },
+    "docs": {
+        "name": "aware-docs",
+        "domain": "docs.aware.goodciso.org",
+        "dir": "docs",
+        "site_id": "916fcf43-c51b-4198-a268-4384c4d90a4c",
+    },
+    "demo": {
+        "name": "aware-playground",
+        "domain": "demo.aware.goodciso.org",
+        "dir": "demo",
+        "site_id": "66acc7fe-692f-440b-a9e9-1437010ccc03",
+    },
+    "corporate": {
+        "name": None,
+        "domain": "goodciso.org",
+        "dir": "corporate",
+        "site_id": "e7f43642-d6f1-4625-a4c9-3cfdb0525446",
+    },
 }
 
 NETLIFY = "https://api.netlify.com/api/v1"
@@ -103,12 +130,12 @@ def save_state(s: dict):
 
 
 def ensure_site(key: str, cfg: dict, token: str, state: dict) -> str:
-    if key in state and state[key].get("site_id"):
-        print(f"  site {key}: {state[key]['site_id']} (existing)")
-        return state[key]["site_id"]
     if cfg.get("site_id"):
-        print(f"  site {key}: {cfg['site_id']} (canonical production site)")
+        print(f"  site {key}: {cfg['site_id']}")
         return cfg["site_id"]
+    if key in state and state[key].get("site_id"):
+        print(f"  site {key}: {state[key]['site_id']} (from state)")
+        return state[key]["site_id"]
 
     st, res = api("POST", f"{NETLIFY}/sites", token, {"name": cfg["name"]})
     if st not in (200, 201):
@@ -193,6 +220,20 @@ def dns_upsert(domain: str, target: str, token: str):
         print(f"  dns {name} -> {target}: created ({st2})")
 
 
+def load_token() -> str:
+    """The Netlify credential, from the environment first.
+
+    Netlify's CLI resolves NETLIFY_AUTH_TOKEN before any stored credential,
+    and so does this. CI has no access to the host's credential store, so
+    the environment is the only source there; the file is the fallback for
+    local runs.
+    """
+    env_token = os.environ.get("NETLIFY_AUTH_TOKEN")
+    if env_token:
+        return env_token.strip()
+    return load_env(CRED)["NETLIFY_AUTH_TOKEN"]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--site", required=True, choices=list(SITES))
@@ -200,8 +241,7 @@ def main():
     ap.add_argument("--no-deploy", action="store_true")
     args = ap.parse_args()
 
-    env = load_env(CRED)
-    token = env["NETLIFY_AUTH_TOKEN"]
+    token = load_token()
     cfg = SITES[args.site]
     directory = DIST / cfg["dir"]
 
@@ -233,8 +273,13 @@ def main():
         target = (site.get("ssl_url") or site.get("url") or "").replace("https://", "").replace("http://", "").rstrip("/")
         if target:
             attach_domain(site_id, cfg["domain"], token)
-            cfenv = load_env(CF_CRED)
-            dns_upsert(cfg["domain"], target, cfenv["CLOUDFLARE_API_TOKEN"])
+            # DNS writes need the Cloudflare credential. In CI that file is
+            # not present and DNS is not needed — the records already exist.
+            if CF_CRED.exists():
+                cfenv = load_env(CF_CRED)
+                dns_upsert(cfg["domain"], target, cfenv["CLOUDFLARE_API_TOKEN"])
+            else:
+                print("  no Cloudflare credential file — DNS not touched")
         else:
             print("  could not determine netlify hostname; DNS skipped")
 

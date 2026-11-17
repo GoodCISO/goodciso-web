@@ -1,0 +1,116 @@
+name: Deploy sites
+
+# The four sites are static and are deployed to Netlify through the Netlify
+# API, using deploy.py. The QA gate runs BEFORE any deploy, so a build that
+# breaks a link, drops a heading or loses a canonical URL never reaches
+# production.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.plan.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build all four sites
+        run: |
+          python3.12 build_all.py
+          python3.12 netlify_config.py
+
+      - name: QA the built output
+        # Link integrity, heading structure, metadata and sitemap consistency,
+        # checked against the built output rather than the source. A failure
+        # here stops the deploy.
+        run: python3.12 qa.py
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sites
+          path: dist/
+          retention-days: 7
+
+      - name: Decide which sites changed
+        id: plan
+        run: |
+          # Only the sites whose built output actually changed need a
+          # deploy. Comparing content hashes keeps an unrelated commit from
+          # rebuilding all four sites.
+          changed=""
+          for site in aware corporate docs demo; do
+            hash=$(find "dist/$site" -type f -not -name ".*" -exec sha256sum {} \; | sort | sha256sum | cut -c1-16)
+            previous=$(cat ".deploy-hashes/$site" 2>/dev/null || echo "")
+            if [ "$hash" != "$previous" ]; then
+              changed="$changed $site"
+              echo "$hash" > ".deploy-hashes/$site"
+            fi
+          done
+          echo "deploy=$changed" >> "$GITHUB_OUTPUT"
+          echo "Sites to deploy:${changed:- none}"
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    # Nothing to deploy if no site's content changed.
+    if: ${{ needs.build.outputs.deploy != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download the built sites
+        uses: actions/download-artifact@v4
+        with:
+          name: sites
+          path: dist
+
+      - name: Deploy to Netlify
+        env:
+          # The Netlify credential for the account that owns all four sites.
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          failed=""
+          for site in ${{ needs.build.outputs.deploy }}; do
+            echo "--- $site ---"
+            if ! python3.12 deploy.py --site "$site"; then
+              echo "::error::$site deploy failed"
+              failed="$failed $site"
+            fi
+          done
+          if [ -n "$failed" ]; then
+            echo "::error::failed sites:$failed"
+            exit 1
+          fi
+
+      - name: Record the deploy hashes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .deploy-hashes
+          git commit -m "chore: record deploy content hashes" || echo "nothing to record"
+          git push || echo "hashes not pushed"
+
+      - name: Verify production
+        # The same verifier used locally. It checks TLS, security headers,
+        # robots, sitemaps and that every sitemap URL resolves.
+        run: python3.12 verify_production.py
