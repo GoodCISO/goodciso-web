@@ -17,6 +17,10 @@ concurrency:
 permissions:
   contents: read
 
+# The Netlify credential reaches the runner as a repository secret. The
+# GitHub credential used to push this file is served by the host's git
+# credential helper and the macOS keychain — never in a remote URL.
+
 jobs:
   build:
     runs-on: ubuntu-latest
