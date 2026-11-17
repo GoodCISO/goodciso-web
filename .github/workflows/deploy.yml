@@ -44,8 +44,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sites
-          path: dist/
+          path: |
+            dist/
+            .deploy-hashes/
           retention-days: 7
+          # v4 excludes hidden files by default, and .deploy-hashes/ is one.
+          include-hidden-files: true
 
       - name: Decide which sites changed
         id: plan
@@ -53,6 +57,11 @@ jobs:
           # Only the sites whose built output actually changed need a
           # deploy. Comparing content hashes keeps an unrelated commit from
           # rebuilding all four sites.
+          #
+          # The directory does not exist in a fresh checkout, and a site
+          # with no recorded hash has never been deployed, so it counts as
+          # changed.
+          mkdir -p .deploy-hashes
           changed=""
           for site in aware corporate docs demo; do
             hash=$(find "dist/$site" -type f -not -name ".*" -exec sha256sum {} \; | sort | sha256sum | cut -c1-16)
@@ -81,7 +90,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: sites
-          path: dist
+          path: .
+          # The artifact carries dist/ and .deploy-hashes/, so extract into
+          # the workspace root rather than into a subdirectory.
 
       - name: Deploy to Netlify
         env:
@@ -104,6 +115,7 @@ jobs:
 
       - name: Record the deploy hashes
         run: |
+          mkdir -p .deploy-hashes
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .deploy-hashes
