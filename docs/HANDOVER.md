@@ -217,9 +217,19 @@ The redirect table lives in `netlify_config.py` and is emitted into `deploy/redi
 | Horizontal overflow | Pass — none |
 | Mobile nav, 44px targets, reduced motion | Pass — all rules shipped and confirmed in the live CSS |
 
+### Acceptance check
+
+`python3.12 acceptance.py` checks the brief's criteria against the live production sites — **94 of 94 pass**. It covers the corporate page set, the AWARE page set, the docs page set, the playground, HTTPS, security headers, robots and sitemaps on every site, every sitemap URL resolving, the contact form's registration with Netlify, and the claim discipline (that the unsupported marketing claims from the previous site are gone).
+
 **Not performed:** Lighthouse/CWV scoring against production, and an independent (axe) automated a11y audit. The manual and programmatic checks above are the evidence offered. A Lighthouse run and an axe sweep are the sensible next QA step.
 
 **Page count:** 55 built pages across the four sites — corporate 17, docs 19, aware 15, demo 2 (page + 404).
+
+### A note on the contact form
+
+Netlify strips the `data-netlify` attribute from the **served** HTML once it has registered a form at build time. The attribute is present in the source and in the deploy; its absence from the live page is not a defect. The authoritative check is Netlify's form registry, which shows the `contact` form live with all six fields (`bot-field`, `name`, `email`, `organisation`, `topic`, `message`). The registry also still holds the previous site's `contact-form`, which has 2 historical submissions — that is the old form, not the new one.
+
+A real submission has still not been made, so the lead-delivery path — where the notification actually goes — remains unproven. Submit it once from the live page.
 
 ---
 

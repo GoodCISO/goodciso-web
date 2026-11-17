@@ -618,7 +618,7 @@ DOCS = [
 <p>AWARE gives every agent a non-human identity, evaluates every tool call against policy <em>before</em> it runs, revokes credentials when authority must end, and records each decision in a hash chain that a third party can independently recompute.</p>
 <div class="gc-callout">
   <strong>Version</strong>
-  These docs describe <code>@goodciso/aware</code> <strong>2.12.3</strong>, Apache-2.0. The install command below installs that version.
+  These docs describe <code>@goodciso/aware</code> <strong>2.12.3</strong>, Apache-2.0. The install command below installs exactly that version.
 </div>
 <h2>Where to start</h2>
 <ul class="gc-list">

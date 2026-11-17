@@ -91,7 +91,7 @@ code, kbd, pre { font-family: var(--gc-font-mono); font-size: 0.9em; }
   font-size: var(--gc-text-sm); font-weight: var(--gc-weight-semibold);
   text-decoration: none; cursor: pointer;
   border: 1px solid transparent;
-  min-height: 44px;                 /* WCAG 2.2 target size (2.5.8) */
+  min-height: 44px;                 /* WCAG 2.2 AAA target size (2.5.5); AA minimum is 24px (2.5.8) */
   transition: background var(--gc-transition), border-color var(--gc-transition), color var(--gc-transition);
 }
 .gc-btn-primary { background: var(--gc-accent-solid); color: var(--gc-surface); border-color: var(--gc-accent-solid); }
