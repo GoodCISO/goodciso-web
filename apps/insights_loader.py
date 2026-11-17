@@ -107,7 +107,7 @@ def article_html(markdown_body: str) -> str:
         body = body.replace(f'href="{old_path}"', f'href="{new_path}"')
     return body
 
-ROOT = Path("/Users/alfie/projects/goodciso-web")
+ROOT = Path(__file__).parent.parent.resolve()
 ARTICLE_DIR = ROOT / "apps" / "insights"
 DOMAIN = "https://goodciso.org"
 

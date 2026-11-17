@@ -22,11 +22,15 @@ Two things happen here beyond extraction:
 from __future__ import annotations
 
 import html
+import os
 import re
 from pathlib import Path
 
-OLD = Path("/Users/alfie/projects/goodciso-website/blog")
-OUT = Path("/Users/alfie/projects/goodciso-web/apps/insights")
+OLD = Path(
+    os.environ.get("LEGACY_BLOG_DIR")
+    or Path.home() / "projects/goodciso-website/blog"
+)
+OUT = Path(__file__).parent.resolve() / "apps" / "insights"
 
 SLUGS = {
     "2026-06-08-container-security-gap-nobody-talks-about.html": "container-security-gap",

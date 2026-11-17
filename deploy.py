@@ -27,11 +27,17 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-ROOT = Path("/Users/alfie/projects/goodciso-web")
+ROOT = Path(__file__).parent.resolve()
 DIST = ROOT / "dist"
 STATE = ROOT / "deploy" / "sites.json"
-CRED = Path("/Users/alfie/.openclaw/credentials/netlify-goodciso.env")
-CF_CRED = Path("/Users/alfie/.openclaw/credentials/cloudflare.env")
+CRED = Path(
+    os.environ.get("NETLIFY_CRED_FILE")
+    or Path.home() / ".openclaw/credentials/netlify-goodciso.env"
+)
+CF_CRED = Path(
+    os.environ.get("CLOUDFLARE_CRED_FILE")
+    or Path.home() / ".openclaw/credentials/cloudflare.env"
+)
 ZONE_ID = "492c93499a5fd0bb7660dfba5bec38a9"
 
 # Site ids are declared here rather than read from deploy/sites.json,

@@ -8,6 +8,7 @@ mis-resolve root-absolute asset paths and give a false rendering result.
 import sys
 import threading
 from functools import partial
+from pathlib import Path
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 SITES = [
@@ -17,7 +18,7 @@ SITES = [
     (8904, "dist/demo"),
 ]
 
-ROOT = "/Users/alfie/projects/goodciso-web"
+ROOT = str(Path(__file__).parent.resolve())
 
 
 class Handler(SimpleHTTPRequestHandler):

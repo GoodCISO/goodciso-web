@@ -7,9 +7,13 @@ either resolve to the equivalent new page or 301 to it. Anything dropped is
 search equity thrown away, so the mapping is explicit rather than implied.
 """
 import json
+import os
 from pathlib import Path
 
-ROOT = Path("/Users/alfie/projects/goodciso-web")
+# The repository root is derived from this file's location, never hardcoded.
+# A hardcoded absolute path made the builder work only on the machine it
+# was written on — the CI build failed on a path that did not exist there.
+ROOT = Path(__file__).parent.resolve()
 DIST = ROOT / "dist"
 
 # ---------------------------------------------------------------------------
@@ -109,10 +113,21 @@ def main():
         "  force = true\n"
     )
     # Copy the preserved AI-agent surface from the live repo if present.
-    live = Path("/Users/alfie/projects/goodciso-website")
+    # The previous corporate site's build tree, where the AI-agent surface
+    # (llms.txt, agent-instructions.txt) and security.txt live. It is a
+    # separate repository; when it is not present the build simply does not
+    # copy those files, and the site still deploys.
+    live = Path(
+        os.environ.get("LEGACY_SITE_DIR")
+        or Path.home() / "projects/goodciso-website"
+    )
+    if not live.exists():
+        live = None
     d = DIST / "corporate"
     copied = []
     for f in CORPORATE_PRESERVED:
+        if live is None:
+            break
         src = live / f
         if src.exists() and not (d / f).exists():
             (d / f).write_text(src.read_text(encoding="utf-8"), encoding="utf-8")

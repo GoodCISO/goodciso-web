@@ -11,7 +11,7 @@ import sys
 from html.parser import HTMLParser
 from pathlib import Path
 
-DIST = Path("/Users/alfie/projects/goodciso-web/dist")
+DIST = Path(__file__).parent.resolve() / "dist"
 
 SITE_ROOTS = {
     "aware": "https://aware.goodciso.org",

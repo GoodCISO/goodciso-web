@@ -7,6 +7,7 @@ UNVERIFIED rather than passed.
 """
 from __future__ import annotations
 
+import os
 import re
 import ssl
 import urllib.error
@@ -142,7 +143,9 @@ def netlify_forms():
     from pathlib import Path as _P
 
     env = {}
-    for line in _P("/Users/alfie/.openclaw/credentials/netlify-goodciso.env").read_text().splitlines():
+    cred = _P(os.environ.get("NETLIFY_CRED_FILE")
+                  or (_P.home() / ".openclaw/credentials/netlify-goodciso.env"))
+    for line in cred.read_text().splitlines():
         line = line.strip()
         if line and not line.startswith("#") and "=" in line:
             k, v = line.split("=", 1)
