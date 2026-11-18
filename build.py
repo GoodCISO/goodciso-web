@@ -92,9 +92,14 @@ AWARE_LOGO = """<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria
 <path d="M8.5 12.2l2.6 2.6 4.7-5.2" stroke="var(--gc-accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>"""
 
-GOODCISO_LOGO = """<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-<rect x="2.5" y="2.5" width="19" height="19" rx="3" stroke="currentColor" stroke-width="1.6"/>
-<path d="M7 15.5V8.5l5 4.2 5-4.2v7" stroke="var(--gc-accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+# The GoodCISO mark: the established teal shield with a G, restored from
+# the previous live site rather than redesigned. The colour is baked in
+# because it is the brand's identity, not a theme token — AWARE's accent
+# must never appear in it.
+GOODCISO_LOGO = """<svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+<path d="M16 3 L27 8.4 L27 18 Q27 24.6 16 29 Q5 24.6 5 18 L5 8.4 Z" fill="#00A896"/>
+<path d="M16 7.6 L23.5 12 L23.5 18 Q23.5 22.4 16 25.8 Q8.5 22.4 8.5 18 L8.5 12 Z" fill="#030712"/>
+<circle cx="16" cy="17" r="3.1" fill="#00A896"/>
 </svg>"""
 
 
@@ -113,8 +118,75 @@ body { font-feature-settings: "cv02","cv03","cv04","ss01"; }
 """
     if site.key == "corporate":
         return """
-/* ---- GoodCISO: advisory and editorial. More air, more prose, less chrome. ---- */
-:root { --gc-header-h: 72px; }
+/* ---- GoodCISO: the established corporate brand.
+       Teal #00a896, navy #030712, amber #F5A623. These are GoodCISO's
+       colours, not AWARE's: the two brands share typography and the
+       component layer, and are otherwise distinct. AWARE's Signal green
+       does not appear here. ---- */
+:root {
+  --gc-header-h: 72px;
+
+  /* The brand teal #00A896 is 2.85:1 on the light background — it fails
+     AA as text. So it stays the brand accent for FILLS and the logomark,
+     and the ramp carries darker steps for text and solid buttons.
+     Contrast measured, not assumed:
+       #00A896 on #F8FAFC  2.85  fill/icon only
+       #007669 on #F8FAFC  5.29  accent text, link      (AA)
+       #FFFFFF on #007669 5.53  solid button           (AA) */
+  --gc-green-50:  #F0FDFA;
+  --gc-green-100: #CCFBF1;
+  --gc-green-200: #99F6E4;
+  --gc-green-300: #5EEAD4;
+  --gc-green-400: #2DD4BF;
+  --gc-green-500: #14B8A6;
+  --gc-green-600: #00A896;   /* GoodCISO teal — the brand colour */
+  --gc-green-700: #007669;   /* 5.29:1 on --gc-bg — accent as text */
+  --gc-green-800: #00685D;
+  --gc-green-900: #005248;
+
+  /* The focus ring needs 3:1 against the background. The brand teal
+     #00A896 is 2.85:1 on --gc-bg and fails, so the focus token uses the
+     accessible teal-700 (4.55:1). The brand colour still drives the
+     logomark and the accent fill. */
+  --gc-focus: #007669;
+
+  --gc-slate-950: #030712;   /* GoodCISO navy */
+}
+
+/* The corporate dark theme: GoodCISO navy with teal accents. The solid
+   button uses navy text on the teal fill (8.09:1) — white on teal is
+   2.49:1 and fails. */
+[data-theme="dark"] {
+  --gc-bg:          #030712;
+  --gc-surface:     #0A1220;
+  --gc-surface-2:   #111C2E;
+  --gc-border:      #1E2D44;
+  --gc-border-strong: #94A3B8;
+
+  --gc-text:        #E2E8F0;
+  --gc-text-muted:  #94A3B8;
+  --gc-text-subtle: #94A3B8;
+
+  --gc-accent:      #00A896;
+  --gc-accent-text: #2DD4BF;             /* 10.82:1 on --gc-bg */
+  --gc-accent-solid:#14B8A6;
+  --gc-accent-on-solid: #030712;        /* 8.09:1 on --gc-accent-solid */
+  --gc-accent-hover:#2DD4BF;
+  --gc-accent-soft: rgba(0, 168, 150, 0.14);
+
+  --gc-link:        #2DD4BF;
+  --gc-focus:       #14B8A6;             /* 8.09:1 — non-text contrast */
+  --gc-danger:      #F87171;
+  --gc-danger-bg:   #2A1416;
+  --gc-warn-text:   #FBBF24;
+  --gc-warn-bg:     #2A1F0C;
+  --gc-ok-text:     #2DD4BF;
+  --gc-ok-bg:       #0E2418;
+  --gc-code-bg:     #010409;
+  --gc-code-text:   #E2E8F0;
+  --gc-hero-glow:   rgba(0, 168, 150, 0.12);
+}
+
 body { font-size: 1.0625rem; }
 .gc-hero { padding-top: var(--gc-space-24); }
 .gc-hero h1 { max-width: 16ch; font-size: clamp(2.25rem, 1.5rem + 3vw, 3.5rem); }

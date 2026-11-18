@@ -34,8 +34,17 @@ def write_site(site: Site, pages: list[Page], extra_assets: dict[str, str] | Non
     shutil.copy(B.PKG_BASE, assets / "base.css")
     (assets / "brand.css").write_text(site.brand_css)
 
-    # favicon
-    fav = (B.BRAND_DIR / "favicon.svg")
+    # Favicon — per site. The AWARE shield-and-checkmark is AWARE's mark
+    # and must never be served on the corporate site: a corporate favicon
+    # that is the product's logo misrepresents the relationship between
+    # the two brands.
+    fav_name = {
+        "corporate": "favicon-goodciso.svg",
+        "aware": "favicon-aware.svg",
+        "docs": "favicon-aware.svg",
+        "demo": "favicon-aware.svg",
+    }.get(site.key, "favicon-aware.svg")
+    fav = B.BRAND_DIR / fav_name
     if fav.exists():
         shutil.copy(fav, out / "favicon.svg")
 

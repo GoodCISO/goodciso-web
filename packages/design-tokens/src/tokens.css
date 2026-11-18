@@ -105,6 +105,10 @@
   --gc-text-muted:  var(--gc-slate-600);   /* 7.24:1  on --gc-bg */
   --gc-text-subtle: var(--gc-slate-500);   /* 4.55:1  on --gc-bg */
 
+  /* The accent resolves through the green ramp, which each brand
+     overrides with its own. GoodCISO's corporate brand.css redefines the
+     ramp in teal, so the accent follows automatically. The values below
+     are AWARE's, and are the light-theme defaults. */
   --gc-accent:      var(--gc-green-600);   /* brand accent: fills, icons, marks */
   --gc-accent-text: var(--gc-green-700);   /* 4.79:1  on --gc-bg — accent as TEXT */
   --gc-accent-solid:var(--gc-green-700);   /* 5.02:1 with white text */

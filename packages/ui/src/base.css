@@ -94,9 +94,13 @@ code, kbd, pre { font-family: var(--gc-font-mono); font-size: 0.9em; }
   min-height: 44px;                 /* WCAG 2.2 AAA target size (2.5.5); AA minimum is 24px (2.5.8) */
   transition: background var(--gc-transition), border-color var(--gc-transition), color var(--gc-transition);
 }
-.gc-btn-primary { background: var(--gc-accent-solid); color: var(--gc-surface); border-color: var(--gc-accent-solid); }
+/* The solid button's text colour comes from --gc-accent-on-solid, which
+   each theme sets for itself. A dark accent fill needs dark text; a
+   mid-tone fill needs white. Hard-coding either one fails AA in the
+   other theme. */
+.gc-btn-primary { background: var(--gc-accent-solid); color: var(--gc-accent-on-solid, var(--gc-surface)); border-color: var(--gc-accent-solid); }
 .gc-btn-primary:hover { background: var(--gc-accent-hover); border-color: var(--gc-accent-hover); }
-[data-theme="dark"] .gc-btn-primary { color: var(--gc-accent-on-solid); }
+:root, [data-theme="light"] { --gc-accent-on-solid: #FFFFFF; }
 .gc-btn-secondary { background: var(--gc-surface); color: var(--gc-text); border-color: var(--gc-border-strong); }
 .gc-btn-secondary:hover { background: var(--gc-surface-2); }
 .gc-btn-ghost { background: transparent; color: var(--gc-text-muted); }
