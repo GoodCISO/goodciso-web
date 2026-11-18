@@ -348,7 +348,7 @@ def render_page(site: Site, page: Page, nav_current: str = "") -> str:
     </div>
     <div class="gc-footer-bottom">
       <span>&copy; 2026 Good CISO Limited. Registered in England &amp; Wales, company no. 16294946.</span>
-      <span>AWARE is licensed under Apache-2.0. &ldquo;{esc(logo_text)}&rdquo; and the shield mark are trademarks of Good CISO Limited.</span>
+      <span>AWARE is licensed under Apache-2.0. &ldquo;Good CISO&rdquo; and the shield mark are trademarks of Good CISO Limited.</span>
     </div>
   </div>
 </footer>
