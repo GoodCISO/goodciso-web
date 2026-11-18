@@ -103,29 +103,88 @@ The `workflow` scope on this token is what allows a push that creates or updates
 
 ### How the credential reaches git
 
-There is **one** credential file, and the token never appears in a remote URL, in `.git/config`, in a process argument, or in a shell history.
+The token never appears in a remote URL, in `.git/config`, in a process argument, or in a shell history. There is one credential file, and four places that hold the same secret:
+
+| Where | Role |
+|---|---|
+| `~/.openclaw/credentials/github-pat.env` | The source of truth. Mode `0600`. Read at use time by the git credential helper. |
+| `~/.netrc` | **The one that actually authenticates.** `git-remote-https` delegates the HTTP layer to curl, and curl reads `~/.netrc` for `machine github.com` credentials. |
+| macOS keychain (`github.com`, protocol `htps`) | Backs `osxkeychain`, first in the global helper list. |
+| `~/bin/git-credential-github-alvin` | The git credential helper; reads the credential file. |
+
+**The `.netrc` is the one that matters, and it is the one that is easy to miss.** Because curl reads it directly, it overrides whatever git's credential chain resolves — the helper, the keychain, everything. A stale `.netrc` entry therefore silently wins, and the failure looks exactly like a scope problem:
 
 ```
-git push
-   │
-   ├─ credential.https://github.com.helper  →  ~/bin/git-credential-github-alvin
-   │        reads ~/.openclaw/credentials/github-pat.env at use time
-   │        (the token never enters the script's argv)
-   │
-   └─ the macOS keychain holds the same secret for github.com
-            (a fallback for tools that do not use git's helper chain)
+! [remote rejected] main -> main (refusing to allow a Personal Access Token
+  to create or update workflow `.github/workflows/deploy.yml` without `workflow` scope)
 ```
 
-`osxkeychain` comes first in the global helper list, from Xcode's system gitconfig. It is backed by a keychain entry for `github.com`, and **a stale entry there silently overrides the credential file** — git never reaches the file helper, so a push touching `.github/workflows/` is rejected even though the file holds a token with the right scope. When that happened, the symptom looked like a scope problem and the real cause was a cached secret.
+That message names `workflow` as the missing scope, so the natural reading is "the token lacks the scope" — and the obvious response is to force a different token in. The token was fine the whole time. The credentials git resolved were correct, and the credentials git *transmitted* were not, because curl had already supplied its own.
 
-To refresh the keychain entry after a token rotation:
+**How to tell the difference.** `git credential fill` shows what the helper chain resolves. To see what is actually transmitted, disable the redaction and read the header:
 
 ```bash
-security delete-internet-password -s github.com -a alvin-chang -p htps
-security add-internet-password -U -s github.com -a alvin-chang -p htps -w "<token>"
+GIT_TRACE_CURL=1 GIT_TRACE_REDACT=0 git push origin main 2>&1 \
+  | grep -i "authorization: Basic" \
+  | sed -E 's/.*Basic ([A-Za-z0-9+\/=]+)/\1/' \
+  | base64 -d | cut -d: -f2
 ```
 
-> **Never put the token in the remote URL.** It works, and it is tempting when a push is being rejected, but it leaves the secret in `.git/config` where it outlives the fix, in `ps` output for any process listing, and in the shell history. The credential chain above needs no such workaround — and when a push is rejected, the cause is nearly always a stale cached credential, not the URL.
+If that is not the token in the credential file, the chain is not the problem — something below git is supplying its own credential.
+
+> **Never put the token in the remote URL.** It works, and it is tempting when a push is being rejected, but it leaves the secret in `.git/config` where it outlives the fix, in `ps` output for any process listing, and in the shell history. It also hides the real cause, which is what happened here.
+
+### Refreshing every holder after a token rotation
+
+All four must be updated, or the stale one wins:
+
+```bash
+NEW="<new token>"
+
+# 1. The credential file (the source of truth)
+#    ~/.openclaw/credentials/github-pat.env, mode 0600, GITHUB_TOKEN=$NEW
+
+# 2. .netrc — the one that actually authenticates
+security_note=""; python3 - <<'PY'
+import os, re
+from pathlib import Path
+p = Path(os.path.expanduser("~/.netrc"))
+tok = None
+for line in Path("/Users/alfie/.openclaw/credentials/github-pat.env").read_text().splitlines():
+    line = line.strip()
+    if line and not line.startswith("#") and "=" in line:
+        k, v = line.split("=", 1)
+        if k.strip() == "GITHUB_TOKEN":
+            tok = v.strip().strip('"').strip("'")
+p.write_text(re.sub(r"(machine\s+github\.com.*?password\s+)\S+", lambda m: m.group(1) + tok, p.read_text(), flags=re.S))
+os.chmod(p, 0o600)
+PY
+
+# 3. The keychain, which osxkeychain reads first
+security delete-internet-password -s github.com -a alvin-chang -p htps
+security add-internet-password -U -s github.com -a alvin-chang -p htps -w "$NEW"
+
+# 4. Confirm every holder agrees
+python3 - <<'PY'
+import os, re, subprocess
+from pathlib import Path
+tok = None
+for line in Path("/Users/alfie/.openclaw/credentials/github-pat.env").read_text().splitlines():
+    line = line.strip()
+    if line and not line.startswith("#") and "=" in line:
+        k, v = line.split("=", 1)
+        if k.strip() == "GITHUB_TOKEN":
+            tok = v.strip().strip('"').strip("'")
+nr = re.search(r"machine\s+github\.com.*?password\s+(\S+)", Path(os.path.expanduser("~/.netrc")).read_text(), re.S).group(1)
+r = subprocess.run(["git","credential","fill"], input="protocol=https\nhost=github.com\n\n", capture_output=True, text=True)
+helper = [l.split("=",1)[1] for l in r.stdout.splitlines() if l.startswith("password=")][0]
+kc = subprocess.run(["security","find-internet-password","-s","github.com","-p","htps","-w"], capture_output=True, text=True).stdout.strip()
+print("  credential file:", tok == tok)
+print("  .netrc         :", nr == tok)
+print("  git helper     :", helper == tok)
+print("  macOS keychain :", kc == tok)
+PY
+```
 
 Token scope required on Netlify: site read/write, domain read/write, build-hook read/write, deploy read/write.
 
@@ -280,27 +339,14 @@ The token must carry both `repo` and `workflow`. `workflow` is what permits a pu
 
 ```bash
 # 1. Write the new token to the one credential file, mode 0600
-cat > ~/.openclaw/credentials/github-pat.env <<'EOF'
-# GitHub credential — GoodCISO org and goodciso-web (repo + workflow scope).
-# Read at use time by ~/bin/git-credential-github-alvin for github.com.
-GITHUB_TOKEN=***
-EOF
-chmod 600 ~/.openclaw/credentials/github-pat.env
+**Four places hold the token, and all four must be updated.** The one that is easy to miss — and the one that actually authenticates — is `~/.netrc`: `git-remote-https` hands the HTTP layer to curl, and curl reads `.netrc` for `machine github.com` credentials on its own, ahead of anything git's credential chain resolves. A stale `.netrc` therefore overrides a perfectly good token, and the push fails with a message that blames the scope.
 
-# 2. Refresh the macOS keychain entry, which osxkeychain consults FIRST.
-#    Skipping this is the trap: git will serve the stale cached secret and
-#    the push fails with a scope error that looks like a token problem.
-security delete-internet-password -s github.com -a alvin-chang -p htps
-security add-internet-password -U -s github.com -a alvin-chang -p htps -w "<new token>"
+The full procedure, including the verification, is in §3 under "Refreshing every holder after a token rotation".
 
-# 3. Confirm the chain serves the new token
-git credential fill <<< $'protocol=https\nhost=github.com\n'   # password must be the new one
+The end-to-end test that matters is a push that touches `.github/workflows/`. A push that only changes a `.md` file will succeed with a `repo`-only token, which is why the problem can hide for a long time:
 
-# 4. Confirm the scopes
-curl -sI -H "Authorization: Bearer <new token>" https://api.github.com/user | grep -i x-oauth-scopes
-#   -> x-oauth-scopes: repo, workflow
-
-# 5. A push that touches .github/workflows/ is the real test
+```bash
+# Make a trivial change to .github/workflows/deploy.yml, commit, and push.
 git push origin main
 ```
 
