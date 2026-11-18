@@ -333,7 +333,47 @@ A real submission has still not been made, so the lead-delivery path — where t
 
 ---
 
-## 9. Rotating the GitHub credential
+## 9. Brand assets
+
+GoodCISO and AWARE are **distinct brands**, and their assets are kept apart deliberately.
+
+| | GoodCISO | AWARE |
+|---|---|---|
+| Logomark | Teal shield with a G, navy counter-shape | Shield with a check |
+| Primary | Teal `#00A896` on navy `#030712` | Signal green `#16A34A` on midnight `#0B1220` |
+| Favicon | `assets/brand/favicon-goodciso.svg` | `assets/brand/favicon-aware.svg` |
+| Lives on | goodciso.org | aware.goodciso.org, docs.aware.goodciso.org, demo.aware.goodciso.org |
+
+The GoodCISO mark and palette are the **established** ones — they exist in `~/projects/goodciso-logo` and in the previous live site's `favicon.svg`. They were restored, not redesigned.
+
+The AWARE shield-and-checkmark is AWARE's mark and is **never** served on the corporate site. A corporate favicon that is the product's logo misrepresents the relationship the two brands are meant to have, which is the opposite of what the brief asked for.
+
+### Teal needs its own accessible steps
+
+The brand teal is the same kind of trap the brief's Signal green was — it fails AA as text:
+
+| Pair | Ratio | Use |
+|---|---|---|
+| `#00A896` on `#F8FAFC` | 2.85 | the brand colour: fills, icons, the logomark |
+| `#007669` on `#F8FAFC` | 5.29 | accent text, links (AA) |
+| `#FFFFFF` on `#007669` | 5.53 | solid button, light theme (AA) |
+| `#030712` on `#14B8A6` | 8.09 | solid button, dark theme (AA) |
+| `#007669` on `#F8FAFC` | 4.55 | focus ring (needs 3:1, not 4.5) |
+
+So the brand colour stays the brand colour for fills and the mark, and the ramp carries darker steps for anything readable. The focus ring needed the same treatment — the brand teal is 2.85:1, below the 3:1 a focus indicator requires.
+
+### Checking a brand change
+
+`python3.12 contrast.py` resolves the built CSS through the real cascade and checks every foreground/background pair against its threshold, in both themes, on all four sites. Run it after any colour change:
+
+```bash
+python3.12 build_all.py && python3.12 netlify_config.py
+python3.12 contrast.py
+```
+
+It exists because a hand-written checker got the cascade subtly wrong — it treated `:root` as light-only, so a dark theme's `var(--gc-slate-950)` resolved to nothing and the tool reported no failures while measuring nothing.
+
+## 10. Rotating the GitHub credential
 
 The token must carry both `repo` and `workflow`. `workflow` is what permits a push that creates or updates anything under `.github/workflows/`.
 
@@ -350,7 +390,7 @@ The end-to-end test that matters is a push that touches `.github/workflows/`. A 
 git push origin main
 ```
 
-## 10. Outstanding issues
+## 11. Outstanding issues
 
 1. **Resolved — the four blog posts are now published.** They were migrated into native pages at `/insights/<slug>/`, the old `/blog/*.html` URLs 301 to the articles themselves rather than to the index, and the `/insights` index links all four. The migration also runs a claim-correction pass: the posts predate the AWARE 2.12.2 README correction and contained "cryptographic identity" and T0-T4-as-enforcement-tier claims, so those sentences were rewritten to match `docs/capability-register.md`.
 2. **The contact form was not submitted end-to-end against production.** The form is marked `data-netlify="true"` with a honeypot, which Netlify handles natively, and the markup and labels were verified — but no real submission was made, so the lead-delivery path is unproven. Submit it once from the live page before relying on it.
@@ -362,7 +402,7 @@ git push origin main
 
 ---
 
-## 11. The governing document
+## 12. The governing document
 
 **`docs/capability-register.md`** classifies every AWARE capability as IMPLEMENTED, PARTIALLY IMPLEMENTED, DEMONSTRATION, ROADMAP or UNVERIFIED, against three separate axes — does the code exist, is it wired into a runtime path, is it test-covered — and cites file and line for each claim.
 
