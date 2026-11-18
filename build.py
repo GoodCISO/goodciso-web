@@ -82,6 +82,10 @@ class Site:
     tagline: str = ""
     robots: str = "index, follow"
     theme_default: str = "dark"
+    # The accessible name for the header logo link. It has to carry the
+    # brand, because the mark itself is decorative and the wordmark is
+    # the visible text.
+    logo_label: str = "GoodCISO"
 
 
 # --------------------------------------------------------------------------
@@ -92,15 +96,22 @@ AWARE_LOGO = """<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria
 <path d="M8.5 12.2l2.6 2.6 4.7-5.2" stroke="var(--gc-accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>"""
 
-# The GoodCISO mark: the established teal shield with a G, restored from
-# the previous live site rather than redesigned. The colour is baked in
-# because it is the brand's identity, not a theme token — AWARE's accent
-# must never appear in it.
-GOODCISO_LOGO = """<svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-<path d="M16 3 L27 8.4 L27 18 Q27 24.6 16 29 Q5 24.6 5 18 L5 8.4 Z" fill="#00A896"/>
-<path d="M16 7.6 L23.5 12 L23.5 18 Q23.5 22.4 16 25.8 Q8.5 22.4 8.5 18 L8.5 12 Z" fill="#030712"/>
-<circle cx="16" cy="17" r="3.1" fill="#00A896"/>
-</svg>"""
+# The GoodCISO logo: the ORIGINAL artwork, extracted from
+# ~/projects/good-ciso-logo/good-ciso-logo.png by extract_logo.py.
+#
+# It is an image rather than inline SVG for a reason: the artwork was
+# traced into a path by hand as a first attempt, and the trace lost the
+# G-shaped counter and rounded the shield's point. The original pixels are
+# the authentic mark, so the original pixels are what ship.
+GOODCISO_LOGO = (
+    '<img class="gc-logo-mark" src="/assets/goodciso-shield.png" width="26" height="30"'
+    ' alt="" decoding="async">'
+)
+# The wordmark: the original "Good CISO" letterforms, with "Good" in the
+# heavier weight and "CISO" in caps — matching the source artwork. It is
+# live text so it stays selectable and crisp, and it carries the
+# accessible name.
+GOODCISO_WORDMARK = '<span class="gc-wordmark"><span class="gc-wordmark-good">Good</span> CISO</span>' 
 
 
 def brand_css_for(site: Site) -> str:
@@ -123,6 +134,17 @@ body { font-feature-settings: "cv02","cv03","cv04","ss01"; }
        colours, not AWARE's: the two brands share typography and the
        component layer, and are otherwise distinct. AWARE's Signal green
        does not appear here. ---- */
+
+/* The wordmark reproduces the original lettering: "Good" in the heavier
+   weight, "CISO" in caps, both in the artwork's dark navy. */
+.gc-wordmark {
+  font-weight: var(--gc-weight-semibold);
+  color: var(--gc-text);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.gc-wordmark-good { font-weight: var(--gc-weight-bold); }
+.gc-logo-mark { flex-shrink: 0; width: auto; height: 30px; }
 :root {
   --gc-header-h: 72px;
 
@@ -247,10 +269,20 @@ def render_page(site: Site, page: Page, nav_current: str = "") -> str:
         footer_cols.append(f"<div><h4>{esc(head)}</h4><ul>{items}</ul></div>")
 
     logo = site.logo_svg
-    logo_text = "GoodCISO" if site.key == "corporate" else "AWARE"
+    # The corporate site uses the ORIGINAL wordmark — "Good" in the
+    # heavier weight, "CISO" in caps, matching the source artwork. The
+    # product sites keep AWARE's own wordmark.
+    logo_text = GOODCISO_WORDMARK if site.key == "corporate" else "AWARE"
     # The header CTA must exist on the site it is rendered into. "/contact"
     # only exists on the corporate site; the product sites have their own
     # entry point, and a 404 in the primary CTA is not a small defect.
+    # The favicon differs per site: the corporate site serves the original
+    # GoodCISO shield artwork, the AWARE sites their own mark.
+    icon_href, icon_type = (
+        ("/favicon.png", "image/png")
+        if site.key == "corporate"
+        else ("/favicon.svg", "image/svg+xml")
+    )
     cta = {
         "aware": ("/get-started", "Get started"),
         "corporate": ("/contact", "Contact us"),
@@ -276,7 +308,7 @@ def render_page(site: Site, page: Page, nav_current: str = "") -> str:
 <meta name="twitter:title" content="{esc(page.title)} | {esc(site.title_suffix)}">
 <meta name="twitter:description" content="{esc(page.description)}">
 <meta name="theme-color" content="#0B1220">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="{icon_href}" type="{icon_type}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -289,7 +321,7 @@ def render_page(site: Site, page: Page, nav_current: str = "") -> str:
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="gc-header">
   <div class="gc-container gc-header-inner">
-    <a class="gc-logo" href="/">{logo}<span>{esc(logo_text)}</span></a>
+    <a class="gc-logo" href="/" aria-label="{esc(site.logo_label)}">{logo}{logo_text}</a>
     <nav class="gc-nav" id="nav" data-open="false" aria-label="Main">
       {"".join(nav_items)}
     </nav>
@@ -309,7 +341,7 @@ def render_page(site: Site, page: Page, nav_current: str = "") -> str:
   <div class="gc-container">
     <div class="gc-footer-grid">
       <div>
-        <a class="gc-logo" href="/">{logo}<span>{esc(logo_text)}</span></a>
+        <a class="gc-logo" href="/" aria-label="{esc(site.logo_label)}">{logo}{logo_text}</a>
         {f'<p class="gc-muted gc-mt-4" style="font-size:var(--gc-text-sm)">{md(site.tagline)}</p>' if site.tagline else ''}
       </div>
       {"".join(footer_cols)}

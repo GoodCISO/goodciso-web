@@ -34,19 +34,39 @@ def write_site(site: Site, pages: list[Page], extra_assets: dict[str, str] | Non
     shutil.copy(B.PKG_BASE, assets / "base.css")
     (assets / "brand.css").write_text(site.brand_css)
 
+    # The original GoodCISO artwork. The corporate header uses it; the
+    # AWARE sites keep their own mark, but the assets are copied to all
+    # four so a shared component can reach them.
+    for asset in B.BRAND_DIR.glob("goodciso-*.png"):
+        shutil.copy(asset, out / "assets" / asset.name)
+
     # Favicon — per site. The AWARE shield-and-checkmark is AWARE's mark
     # and must never be served on the corporate site: a corporate favicon
     # that is the product's logo misrepresents the relationship between
     # the two brands.
-    fav_name = {
-        "corporate": "favicon-goodciso.svg",
-        "aware": "favicon-aware.svg",
-        "docs": "favicon-aware.svg",
-        "demo": "favicon-aware.svg",
-    }.get(site.key, "favicon-aware.svg")
-    fav = B.BRAND_DIR / fav_name
-    if fav.exists():
-        shutil.copy(fav, out / "favicon.svg")
+    # Favicon — per site, from the ORIGINAL brand artwork. The AWARE
+    # shield-and-checkmark is AWARE's mark and must never be served on the
+    # corporate site, where it misrepresents the relationship between the
+    # two brands.
+    if site.key == "corporate":
+        # The corporate favicon is the ORIGINAL shield artwork. An SVG of
+        # it could not be traced faithfully — the trace lost the G-shaped
+        # counter — so the original pixels are what ship.
+        shield = B.BRAND_DIR / "goodciso-shield.png"
+        if shield.exists():
+            shutil.copy(shield, out / "favicon.png")
+    else:
+        fav = B.BRAND_DIR / "favicon-aware.svg"
+        if fav.exists():
+            shutil.copy(fav, out / "favicon.svg")
+
+    # The GoodCISO logo artwork, served from the corporate site. Both are
+    # cut from the original 1024x1024 file, so the mark on the site is the
+    # original mark.
+    for asset in ("goodciso-logo.png", "goodciso-shield.png"):
+        src = B.BRAND_DIR / asset
+        if src.exists():
+            shutil.copy(src, out / "assets" / asset)
 
     written = []
     for page in pages:
@@ -166,6 +186,7 @@ def main():
             brand_css=B.brand_css_for(Site(key="aware", out_dir=None, domain="", title_suffix="", nav=[], footer_links=[])),
             logo_svg=B.AWARE_LOGO,
             tagline=AWARE_TAGLINE,
+            logo_label="AWARE — by GoodCISO, home",
         ),
         Site(
             key="corporate",
@@ -177,6 +198,7 @@ def main():
             brand_css=B.brand_css_for(Site(key="corporate", out_dir=None, domain="", title_suffix="", nav=[], footer_links=[])),
             logo_svg=B.GOODCISO_LOGO,
             tagline=C_TAGLINE,
+            logo_label="Good CISO — home",
             theme_default="light",
         ),
         Site(

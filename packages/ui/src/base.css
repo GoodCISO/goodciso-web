@@ -63,6 +63,38 @@ code, kbd, pre { font-family: var(--gc-font-mono); font-size: 0.9em; }
 }
 .gc-header-inner { display: flex; align-items: center; gap: var(--gc-space-6); height: var(--gc-header-h); }
 .gc-logo { display: inline-flex; align-items: center; gap: var(--gc-space-2); font-weight: var(--gc-weight-bold); color: var(--gc-text); text-decoration: none; letter-spacing: var(--gc-tracking-tight); }
+
+/* ---- The brand lockup -------------------------------------------------
+   The GoodCISO header uses the ORIGINAL mark and wordmark, extracted from
+   the source artwork. The mark is an image so it is the authentic
+   artwork; the wordmark is live text so it stays selectable and crisp.
+   "Good" carries the heavier weight and "CISO" the caps, matching the
+   source. */
+.gc-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gc-space-2);
+  text-decoration: none;
+  color: var(--gc-text);
+  white-space: nowrap;
+}
+.gc-logo-mark {
+  width: 26px;
+  height: 30px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.gc-wordmark {
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1;
+  color: var(--gc-text);
+}
+.gc-wordmark-good {
+  font-weight: 700;
+}
+
 .gc-nav { display: flex; align-items: center; gap: var(--gc-space-1); margin-left: auto; }
 .gc-nav a { color: var(--gc-text-muted); text-decoration: none; padding: var(--gc-space-2) var(--gc-space-3); border-radius: var(--gc-radius-md); font-size: var(--gc-text-sm); font-weight: var(--gc-weight-medium); }
 .gc-nav a:hover { color: var(--gc-text); background: var(--gc-surface-2); }
