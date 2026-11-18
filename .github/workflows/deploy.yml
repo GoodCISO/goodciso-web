@@ -1,3 +1,4 @@
+# verification marker
 name: Deploy sites
 
 # The four sites are static and are deployed to Netlify through the Netlify
