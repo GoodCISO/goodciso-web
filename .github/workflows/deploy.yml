@@ -45,6 +45,20 @@ jobs:
         # here stops the deploy.
         run: python3.12 qa.py
 
+      - name: Record the build in the job summary
+        if: always()
+        run: |
+          {
+            echo "### Build"
+            echo ""
+            echo "| Site | Pages |"
+            echo "|---|---|"
+            for site in aware corporate docs demo; do
+              pages=$(find "dist/$site" -name '*.html' | wc -l | tr -d ' ')
+              echo "| $site | $pages |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
