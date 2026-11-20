@@ -56,10 +56,16 @@ def write_site(site: Site, pages: list[Page], extra_assets: dict[str, str] | Non
             src = B.BRAND_DIR / asset
             if src.exists():
                 shutil.copy(src, out / asset)
-        # /favicon.png is the name build.py links to.
+        # The names build.py links to. /favicon.png and /favicon.ico are
+        # the paths browsers and crawlers ask for by convention; the
+        # brand-named copies sit alongside them so the asset set is
+        # self-describing in the repo.
         png = B.BRAND_DIR / "favicon-goodciso.png"
         if png.exists():
             shutil.copy(png, out / "favicon.png")
+        ico = B.BRAND_DIR / "favicon-goodciso.ico"
+        if ico.exists():
+            shutil.copy(ico, out / "favicon.ico")
     else:
         fav = B.BRAND_DIR / "favicon-aware.svg"
         if fav.exists():

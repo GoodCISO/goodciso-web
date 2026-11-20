@@ -41,6 +41,7 @@ class Page(HTMLParser):
         self.lang = None
         self.inputs = 0
         self.labels = 0
+        self.icon_hrefs = []
         self.html = []
 
     def handle_starttag(self, tag, attrs):
@@ -49,6 +50,13 @@ class Page(HTMLParser):
             self.links.append(a["href"])
         elif tag == "img" and "alt" not in a:
             self.imgs_no_alt.append(a.get("src", "?"))
+        elif tag == "link" and a.get("rel") in ("icon", "apple-touch-icon", "shortcut icon"):
+            # The favicon set. A link to a file that was never copied is a
+            # 404, and a 404 favicon means the browser draws its own
+            # broken default icon — so the link exists but the mark does
+            # not. That is the same defect as the wrong mark.
+            if a.get("href"):
+                self.icon_hrefs.append(a["href"])
         elif tag in ("h1", "h2", "h3", "h4", "h5", "h6"):
             self.h_levels.append(int(tag[1]))
             if tag == "h1":
@@ -270,6 +278,16 @@ def check_site(site: str) -> dict:
         # --- form labels ---
         if p.inputs and p.labels < p.inputs:
             warnings.append(f"{url}: {p.inputs} inputs but {p.labels} labels")
+
+        # --- favicons ---
+        # Every icon the page links to must exist in the build output. A
+        # link to a missing file is a 404, and a 404 favicon means the
+        # browser draws its own broken default icon in place of the mark.
+        for href in p.icon_hrefs:
+            if not href.startswith("/"):
+                continue
+            if not (root / href.lstrip("/")).exists():
+                errors.append(f"{url}: favicon {href} does not exist in the build")
 
     # --- sitemap integrity ---
     sm = root / "sitemap.xml"
