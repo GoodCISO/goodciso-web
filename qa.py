@@ -13,6 +13,11 @@ from pathlib import Path
 
 DIST = Path(__file__).parent.resolve() / "dist"
 
+# The committed brand assets. The brand guard compares the BUILT output
+# against these by content, so a build that ships the wrong mark cannot
+# pass by renaming the file.
+BRAND_DIR = Path(__file__).parent.resolve() / "assets/brand"
+
 SITE_ROOTS = {
     "aware": "https://aware.goodciso.org",
     "corporate": "https://goodciso.org",
@@ -42,6 +47,7 @@ class Page(HTMLParser):
         self.inputs = 0
         self.labels = 0
         self.icon_hrefs = []
+        self.og_images = []
         self.html = []
 
     def handle_starttag(self, tag, attrs):
@@ -70,6 +76,8 @@ class Page(HTMLParser):
                 self.meta_desc = a.get("content")
             if a.get("property") == "og:description":
                 self.meta_desc = self.meta_desc or a.get("content")
+            if a.get("property") == "og:image":
+                self.og_images.append(a.get("content") or "")
         elif tag == "link" and a.get("rel") == "canonical":
             self.canonical = a.get("href")
         elif tag in ("input", "textarea", "select"):
@@ -109,8 +117,44 @@ def page_files(site: str) -> list[Path]:
 # wrongly served on goodciso.org from 2026-11-16 to 2026-11-18.
 AWARE_GREENS = {"#22c55e", "#16a34a"}
 
+# The same two colours in rgb()/rgba() notation, so a literal written in
+# either form is recognised as Signal green. #22C55E is rgb(34, 197, 94) and
+# #16A34A is rgb(22, 163, 74) — the guard must not report "that is not
+# derived" when the real problem is "that is the other brand's green".
+AWARE_GREENS_RGB = {"rgb(34,197,94)", "rgb(22,163,74)"}
+
+
+def _is_aware_green(value: str) -> bool:
+    """True if the colour is AWARE's Signal green, in hex or rgb notation."""
+    if not value:
+        return False
+    low = value.lower().replace(" ", "")
+    if low in AWARE_GREENS:
+        return True
+    # rgba(34, 197, 94, 0.14) -> rgb(34, 197, 94)
+    m = re.fullmatch(r"rgba?\(([^)]+)\)", low)
+    if m:
+        parts = m.group(1).split(",")[:3]
+        if len(parts) == 3:
+            try:
+                triple = ",".join(str(int(float(p))) for p in parts)
+            except ValueError:
+                return False
+            return f"rgb({triple})" in AWARE_GREENS_RGB
+    return False
+
 # The tokens whose RESOLVED value decides the site's accent colour.
 ACCENT_TOKENS = ("--gc-accent", "--gc-accent-text", "--gc-accent-solid")
+
+# Tokens that must be DERIVED from the accent rather than written as a
+# literal colour. The hero glow is a tint of the accent:
+#     --gc-hero-glow: color-mix(in srgb, var(--gc-accent) 10%, transparent);
+# Derived, it follows the brand ramp in every theme and cannot be a stale
+# literal from the other brand. Hard-coded, it can be — and was: it was a
+# literal of AWARE's Signal green in the shared token layer, and a literal
+# teal in the corporate brand block, which is the same value written twice
+# in two places that could drift apart.
+DERIVED_FROM_ACCENT = "--gc-hero-glow"
 
 
 def _css_rules(css: str) -> list[tuple[str, dict]]:
@@ -198,11 +242,34 @@ def check_brand(site: str) -> list[str]:
                         merged.update(decls)
                 for token in ACCENT_TOKENS:
                     resolved = _resolve(merged, token)
-                    if resolved and resolved.lower() in AWARE_GREENS:
+                    if resolved and _is_aware_green(resolved):
                         errors.append(
                             f"corporate: {token} resolves to {resolved} in the "
                             f"{theme} theme — that is AWARE's Signal green. "
                             f"GoodCISO is teal."
+                        )
+                # The hero glow must be derived from the accent. Two ways it
+                # can go wrong, and both are caught here:
+                #   1. it is a literal of AWARE's Signal green — the exact
+                #      bug that put a green glow behind a teal logomark;
+                #   2. it is a literal of ANY colour rather than derived,
+                #      which means the brand ramp cannot reach it and a
+                #      future theme or brand change silently misses it.
+                glow = _resolve(merged, DERIVED_FROM_ACCENT)
+                if glow:
+                    low = glow.lower()
+                    if _is_aware_green(glow):
+                        errors.append(
+                            f"corporate: {DERIVED_FROM_ACCENT} resolves to {glow}"
+                            f" in the {theme} theme — that is AWARE's Signal green. "
+                            f"GoodCISO is teal."
+                        )
+                    elif "var(--gc-accent" not in low:
+                        errors.append(
+                            f"corporate: {DERIVED_FROM_ACCENT} is the literal {glow} "
+                            f"in the {theme} theme. It must be derived from the accent "
+                            f"(color-mix(in srgb, var(--gc-accent) …)) so the brand "
+                            f"ramp reaches it in every theme."
                         )
     else:
         # 3. The AWARE sites must serve the AWARE mark.
@@ -211,6 +278,34 @@ def check_brand(site: str) -> list[str]:
             errors.append(f"{site}: no /favicon.svg — the AWARE mark is missing")
         elif b"22c55e" not in fav.read_bytes().lower():
             errors.append(f"{site}: /favicon.svg is not the AWARE mark")
+
+    # 4. The Open Graph card must belong to THIS brand. The card is what a
+    # shared link shows before a word is read, so a corporate link carrying
+    # AWARE's card is the same defect as a corporate favicon carrying
+    # AWARE's mark — one brand's identity on the other's surface.
+    #
+    # The two cards are compared by CONTENT, not by filename: the build
+    # copies each to /og.png, so the name is the same on every site and
+    # only the bytes can tell them apart.
+    og = root / "og.png"
+    if not og.exists():
+        errors.append(f"{site}: no /og.png — the social card is missing")
+    else:
+        og_bytes = og.read_bytes()
+        if site == "corporate":
+            brand_og = BRAND_DIR / "generated" / "og-corporate.png"
+            if brand_og.exists() and og_bytes != brand_og.read_bytes():
+                errors.append(
+                    "corporate: /og.png is not the GoodCISO social card — "
+                    "a goodciso.org link must not carry the AWARE mark"
+                )
+        else:
+            brand_og = BRAND_DIR / "generated" / "og-aware.png"
+            if brand_og.exists() and og_bytes != brand_og.read_bytes():
+                errors.append(
+                    f"{site}: /og.png is not the AWARE social card — "
+                    "an AWARE link must not carry the corporate mark"
+                )
 
     return errors
 
@@ -288,6 +383,25 @@ def check_site(site: str) -> dict:
                 continue
             if not (root / href.lstrip("/")).exists():
                 errors.append(f"{url}: favicon {href} does not exist in the build")
+
+        # --- Open Graph card ---
+        # The card is the image a shared link shows before a word is read.
+        # A page with no og:image renders as a bare link; a page whose
+        # og:image points at a file the build did not produce renders as a
+        # broken card. Both are "the brand did not arrive", so both fail.
+        #
+        # The card must also belong to THIS site's origin: a corporate
+        # page pointing at an AWARE-hosted card would put the product's
+        # mark on the company's link.
+        if not p.og_images:
+            errors.append(f"{url}: no og:image — a shared link renders with no card")
+        for src in p.og_images:
+            if not src.startswith(origin):
+                errors.append(f"{url}: og:image points off-site: {src}")
+                continue
+            path = src[len(origin):].lstrip("/")
+            if not path or not (root / path).exists():
+                errors.append(f"{url}: og:image {src} does not exist in the build")
 
     # --- sitemap integrity ---
     sm = root / "sitemap.xml"

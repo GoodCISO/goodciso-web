@@ -86,6 +86,12 @@ class Site:
     # brand, because the mark itself is decorative and the wordmark is
     # the visible text.
     logo_label: str = "GoodCISO"
+    # The Open Graph card for this site, as a path under the site's own
+    # root. It is a BRAND surface: the corporate card carries the GoodCISO
+    # mark and the product sites carry the AWARE mark, so the two must not
+    # be the same file. Empty means the site has no card, and qa.py fails
+    # the build if a page then references one.
+    og_image: str = ""
 
 
 # --------------------------------------------------------------------------
@@ -208,17 +214,15 @@ body { font-feature-settings: "cv02","cv03","cv04","ss01"; }
   --gc-code-text:   #E2E8F0;
 }
 
-/* The hero glow is a BRAND colour, so it must be overridden in BOTH
-   themes. It used to be set only inside [data-theme="dark"], which meant
-   the corporate site — which ships in light theme — rendered AWARE's
-   Signal green behind its teal logomark and teal buttons. A brand rule
-   that only applies in one theme is a bug waiting for a theme switch. */
-:root, [data-theme="light"] {
-  --gc-hero-glow:   rgba(0, 168, 150, 0.12);
-}
-[data-theme="dark"] {
-  --gc-hero-glow:   rgba(0, 168, 150, 0.12);
-}
+/* The hero glow needs NO override here. It is derived from --gc-accent in
+   the token layer:
+       --gc-hero-glow: color-mix(in srgb, var(--gc-accent) 10%, transparent);
+   and this brand block redefines --gc-accent, so the glow follows
+   automatically in BOTH themes. It used to be set only inside
+   [data-theme="dark"], so the corporate site — which ships in light theme —
+   rendered AWARE's Signal green behind its teal logomark and teal buttons.
+   A brand rule that applies in only one theme, or that hard-codes a colour
+   the ramp already owns, is a bug waiting for a theme switch. */
 
 body { font-size: 1.0625rem; }
 .gc-hero { padding-top: var(--gc-space-24); }
@@ -314,6 +318,27 @@ def render_page(site: Site, page: Page, nav_current: str = "") -> str:
         "demo": ("/", "Playground"),
     }.get(site.key, ("/get-started", "Get started"))
 
+    # The Open Graph card. This is the image a link shows when it is
+    # shared on LinkedIn, Slack or iMessage — the brand surface a reader
+    # meets BEFORE they read a word. It was missing from every site: the
+    # assets were generated (make_brand_assets.py) but never referenced,
+    # so a shared goodciso.org link rendered with no card at all.
+    #
+    # It is per site, because it is per brand. The corporate card carries
+    # the GoodCISO mark; the product sites carry the AWARE mark. Sharing
+    # one card across both would put the product's mark on the company's
+    # link, which is the same defect as the favicon crossing over.
+    if site.og_image:
+        og_image = (
+            f'<meta property="og:image" content="{esc(site.domain)}{site.og_image}">\n'
+            f'<meta property="og:image:type" content="image/png">\n'
+            f'<meta property="og:image:width" content="1200">\n'
+            f'<meta property="og:image:height" content="630">\n'
+            f'<meta property="og:image:alt" content="{esc(site.title_suffix)}">\n'
+            f'<meta name="twitter:image" content="{esc(site.domain)}{site.og_image}">'
+        )
+    else:
+        og_image = ""
     return f"""<!DOCTYPE html>
 <html lang="en" data-theme="{site.theme_default}">
 <head>
@@ -328,6 +353,7 @@ def render_page(site: Site, page: Page, nav_current: str = "") -> str:
 <meta property="og:title" content="{esc(page.title)} | {esc(site.title_suffix)}">
 <meta property="og:description" content="{esc(page.description)}">
 <meta property="og:url" content="{esc(page.canonical)}">
+{og_image}
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{esc(page.title)} | {esc(site.title_suffix)}">
 <meta name="twitter:description" content="{esc(page.description)}">

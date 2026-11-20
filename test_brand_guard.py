@@ -87,6 +87,58 @@ def main() -> int:
             print("  FAIL  AWARE favicon replaced with the corporate mark: "
                   "the guard reported nothing")
             failures.append("aware favicon")
+        shutil.copy(backup / "aware/favicon.svg", AWARE / "favicon.svg")
+
+        # 5. The hero glow hard-coded to AWARE's Signal green. This is the
+        #    exact bug that put a green glow behind a teal logomark: the
+        #    glow was a literal in the shared token layer, so the corporate
+        #    ramp override could not reach it.
+        tokens = CORP / "assets/tokens.css"
+        tok_original = tokens.read_text()
+        tokens.write_text(tok_original.replace(
+            "--gc-hero-glow:   color-mix(in srgb, var(--gc-accent) 10%, transparent);",
+            "--gc-hero-glow:   rgba(34, 197, 94, 0.14);",
+        ))
+        corporate_fails("hero glow hard-coded to AWARE's Signal green")
+        tokens.write_text(tok_original)
+
+        # 6. The hero glow hard-coded to a colour that is not derived from
+        #    the accent at all. The brand ramp cannot reach a literal, so
+        #    a future brand or theme change would silently miss it.
+        tokens.write_text(tok_original.replace(
+            "--gc-hero-glow:   color-mix(in srgb, var(--gc-accent) 10%, transparent);",
+            "--gc-hero-glow:   rgba(0, 168, 150, 0.12);",
+        ))
+        corporate_fails("hero glow hard-coded instead of derived from the accent")
+        tokens.write_text(tok_original)
+
+        # 7. The corporate social card replaced with AWARE's. The card is
+        #    what a shared goodciso.org link shows before a word is read, so
+        #    this is the favicon defect on the surface that reaches
+        #    further: a link pasted into a chat or a post.
+        shutil.copy(AWARE / "og.png", CORP / "og.png")
+        corporate_fails("corporate social card replaced with the AWARE card")
+        shutil.copy(backup / "corporate/og.png", CORP / "og.png")
+
+        # 8. The corporate social card missing entirely. A shared link
+        #    with no card renders as a bare URL — the brand never arrives.
+        (CORP / "og.png").unlink()
+        corporate_fails("corporate social card missing")
+        shutil.copy(backup / "corporate/og.png", CORP / "og.png")
+
+        # 9. The AWARE site carrying the corporate card. The mirror of
+        #    condition 7, and the one that would put GoodCISO's mark on
+        #    every AWARE link.
+        shutil.copy(backup / "corporate/og.png", AWARE / "og.png")
+        aware_errors = qa.check_brand("aware")
+        if aware_errors:
+            print("  PASS  AWARE social card replaced with the corporate card")
+            print(f"          -> {aware_errors[0]}")
+        else:
+            print("  FAIL  AWARE social card replaced with the corporate card: "
+                  "the guard reported nothing")
+            failures.append("aware social card")
+        shutil.copy(backup / "aware/og.png", AWARE / "og.png")
     finally:
         shutil.rmtree(DIST, ignore_errors=True)
         shutil.copytree(backup, DIST)

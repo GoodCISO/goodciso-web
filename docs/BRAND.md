@@ -46,7 +46,7 @@ appears". A row marked **missing** is work not yet done.
 | Browser chrome colour | `#030712` (`<meta name="theme-color">`) | shipped |
 | Header logomark | `assets/brand/goodciso-shield.png` | shipped |
 | Header wordmark | live text: "Good" bold + "CISO" caps | shipped |
-| Social / OG image | — | **missing** (no `og:image` on any site) |
+| Social / OG image | `assets/brand/generated/og-corporate.png` → `/og.png` | shipped |
 | LinkedIn / company avatar | — | **not in this repo** |
 | Email signature | — | **not in this repo** |
 | Sales deck | `GoodCISO-AWARE-Deck.pptx` (old repo) | **not in this repo** |
@@ -58,7 +58,7 @@ appears". A row marked **missing** is work not yet done.
 | Favicon | `assets/brand/favicon-aware.svg` → `/favicon.svg` | shipped |
 | Browser chrome colour | `#0B1220` | shipped |
 | Header wordmark | live text: "AWARE" | shipped |
-| Social / OG image | — | **missing** |
+| Social / OG image | `assets/brand/generated/og-aware.png` → `/og.png` | shipped |
 
 ### The old repo
 
@@ -107,10 +107,15 @@ Alvin was not notified, and should have been. See §6.
    and for fills; the ramp carries darker steps for anything readable.
 5. **A brand colour override belongs in both themes.** A rule that applies
    in only one theme is a bug waiting for a theme switch.
-6. **Shared tokens carry a green ramp.** The token names (`--gc-green-*`)
-   are shared across brands for component-level reuse; each brand
+6. **Shared tokens carry a green ramp.** The token names (`--gc-green-*`) are
+   shared across brands for component-level reuse; each brand
    overrides the *values*. So the presence of green in `tokens.css` is not
    a defect — but a corporate site whose *resolved* accent is green is.
+7. **Every surface carries its own brand, and the build proves it.** The
+   favicon, the social card and the accent colour are all checked against
+   the committed brand assets by content, not by filename. A surface that
+   is missing fails the build as loudly as one that is wrong: a shared
+   link with no card renders as a bare URL, and the brand never arrives.
 
 ---
 
@@ -125,11 +130,19 @@ the source, and fails the deploy on any of:
 - the corporate `/favicon.png` is missing;
 - the corporate `--gc-accent`, `--gc-accent-text` or `--gc-accent-solid`
   resolves to AWARE's Signal green in **either** theme;
-- an AWARE site's `/favicon.svg` is missing or is not the AWARE mark.
+- `--gc-hero-glow` is a literal rather than derived from the accent, or
+  is AWARE's Signal green;
+- an AWARE site's `/favicon.svg` is missing or is not the AWARE mark;
+- the corporate `/og.png` is missing or is not the GoodCISO social card;
+- an AWARE site's `/og.png` is missing or is not the AWARE social card;
+- a page carries no `og:image`, or one that is off-site or not in the build.
 
 The accent check resolves the cascade rather than grepping for a hex
 string, because `tokens.css` is the shared base layer and legitimately
-carries a green ramp that `brand.css` overrides.
+carries a green ramp that `brand.css` overrides. The card check compares
+by content rather than by filename, because the build copies each card to
+the same name (`/og.png`) on every site — only the bytes can tell the two
+brands apart.
 
 `test_brand_guard.py` proves the guard can fail. It breaks each condition
 in turn and asserts the guard fires — a check that cannot fail is not a
@@ -161,6 +174,22 @@ on all four sites.
    GoodCISO navy; the AWARE sites stay midnight.
 5. `curl -sI https://goodciso.org/favicon.ico` and
    `.../apple-touch-icon.png` must both return 200.
+6. `curl -sI https://goodciso.org/og.png` must return 200, and
+   `curl -s https://goodciso.org/ | grep og:image` must point at
+   `goodciso.org`. Paste a goodciso.org link into a chat and confirm the
+   preview card shows the **GoodCISO** mark, not AWARE's.
+
+### Regenerating the brand assets
+
+```bash
+python3.12 make_brand_assets.py
+```
+
+The generator needs Pillow, and headless Chrome for the AWARE set. It is
+**not** run in CI — the runner installs no packages — so the two Open Graph
+cards are committed to the repository and the build copies them. If the
+mark or the palette changes, re-run the generator and commit the new
+cards alongside the change, or CI will ship the old card.
 
 ---
 

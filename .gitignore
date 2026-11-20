@@ -3,3 +3,13 @@ deploy/sites.json
 deploy/scratch_site_id
 __pycache__/
 *.pyc
+
+# The brand asset generator's caches. The two Open Graph cards ARE
+# committed (see assets/brand/generated/), because the build needs them
+# and CI cannot run the generator — it installs no packages and has no
+# headless Chrome. Everything else in that directory is regenerable with
+# `python3.12 make_brand_assets.py` and is not a build input.
+assets/brand/Inter.ttf
+assets/brand/generated/*
+!assets/brand/generated/og-corporate.png
+!assets/brand/generated/og-aware.png
