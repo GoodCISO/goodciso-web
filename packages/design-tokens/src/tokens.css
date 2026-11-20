@@ -127,7 +127,15 @@
 
   --gc-code-bg:     var(--gc-slate-900);
   --gc-code-text:   var(--gc-slate-100);
-  --gc-hero-glow:   rgba(22, 163, 74, 0.10);
+
+  /* The hero glow is a BRAND colour, so it must be derived from the
+     accent rather than written as a literal. It used to be a literal
+     rgba() of AWARE's green, which the ramp override could not reach —
+     so the corporate site, which redefines the ramp in teal, rendered
+     AWARE's Signal green behind its teal logomark and teal buttons.
+     A brand rule that only applies to one theme, or that is written as
+     a literal instead of derived, is a bug waiting for a theme switch. */
+  --gc-hero-glow:   color-mix(in srgb, var(--gc-accent) 10%, transparent);
 }
 
 /* ---- Dark theme ---- */
@@ -161,7 +169,7 @@
 
   --gc-code-bg:     #060D18;
   --gc-code-text:   var(--gc-slate-200);
-  --gc-hero-glow:   rgba(34, 197, 94, 0.14);
+  --gc-hero-glow:   color-mix(in srgb, var(--gc-accent) 14%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
