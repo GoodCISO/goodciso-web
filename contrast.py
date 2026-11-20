@@ -11,11 +11,16 @@ in the very thing the redesign was meant to improve.
 """
 from __future__ import annotations
 
+import os
 import re
 import sys
 from pathlib import Path
 
-DIST = Path("/Users/alfie/projects/goodciso-web/dist")
+# The build output, resolved relative to THIS FILE so the script runs
+# wherever the repository is checked out. It used to hardcode
+# /Users/alfie/projects/goodciso-web/dist, which cannot exist on a CI
+# runner and made this script host-only.
+DIST = Path(os.environ.get("DIST_DIR") or (Path(__file__).parent.resolve() / "dist"))
 
 
 def strip_comments(css: str) -> str:
@@ -126,10 +131,17 @@ NAMES = [
 
 def main() -> int:
     failures = 0
+    checked = 0
+    missing = []
     for site in ("corporate", "aware", "docs", "demo"):
         if not (DIST / site / "assets" / "tokens.css").exists():
+            # A missing site is a FAILURE, not a skip. Skipping it would let
+            # a build that produced nothing report "ALL CONTRAST CHECKS
+            # PASS" — a check that cannot fail is not a check.
+            missing.append(site)
             continue
         print(f"\n{'=' * 64}\n{site.upper()}\n{'=' * 64}")
+        checked += 1
         for theme in ("light", "dark"):
             vars_ = theme_vars(site, theme)
             v = {n: resolve(vars_, n) for n in NAMES}
@@ -166,9 +178,16 @@ def main() -> int:
                     failures += 1
                 print(f"     {'PASS' if ok else 'FAIL'} {r:6.2f} (need {need})  {label}")
     print(f"\n{'=' * 64}")
-    print("ALL CONTRAST CHECKS PASS" if failures == 0 else f"{failures} FAILURES")
+    if missing:
+        print(f"MISSING BUILT SITES: {', '.join(missing)} — run build_all.py first")
+    if checked == 0:
+        print("NOTHING WAS CHECKED — this is not a pass")
+    elif failures == 0:
+        print(f"ALL CONTRAST CHECKS PASS ({checked} sites)")
+    else:
+        print(f"{failures} FAILURES")
     print("=" * 64)
-    return 1 if failures else 0
+    return 1 if (failures or missing or checked == 0) else 0
 
 
 if __name__ == "__main__":

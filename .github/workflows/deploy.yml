@@ -45,6 +45,14 @@ jobs:
         # here stops the deploy.
         run: python3.12 qa.py
 
+      - name: Check the contrast of the built tokens
+        # Measures every semantic token pair in the BUILT css against the
+        # WCAG 2.2 threshold, resolving the custom properties through the
+        # real cascade. It reads dist/, so it measures what ships. A missing
+        # or unbuilt site fails rather than being skipped: a check that
+        # cannot fail is not a check.
+        run: python3.12 contrast.py
+
       - name: Prove the brand guard can fail
         # The brand guard in qa.py is what stops AWARE's mark being served
         # on goodciso.org again, as it was from 2026-11-16 to 2026-11-18.
