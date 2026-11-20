@@ -341,10 +341,15 @@ GoodCISO and AWARE are **distinct brands**, and their assets are kept apart deli
 |---|---|---|
 | Logomark | Teal shield with a G, navy counter-shape | Shield with a check |
 | Primary | Teal `#00A896` on navy `#030712` | Signal green `#16A34A` on midnight `#0B1220` |
-| Favicon | `assets/brand/favicon-goodciso.svg` | `assets/brand/favicon-aware.svg` |
+| Favicon | `assets/brand/favicon-goodciso.png` (+ `.ico`, `apple-touch-icon.png`) | `assets/brand/favicon-aware.svg` |
 | Lives on | goodciso.org | aware.goodciso.org, docs.aware.goodciso.org, demo.aware.goodciso.org |
 
 The GoodCISO mark and palette are the **established** ones — they exist in `~/projects/goodciso-logo` and in the previous live site's `favicon.svg`. They were restored, not redesigned.
+
+**`docs/BRAND.md` is the brand decision record** — it records what the two
+marks are, the full list of surfaces each one appears on, why they are kept
+apart, and what happened when the corporate favicon briefly carried AWARE's
+mark in November 2026. Read it before changing anything brand-shaped.
 
 The AWARE shield-and-checkmark is AWARE's mark and is **never** served on the corporate site. A corporate favicon that is the product's logo misrepresents the relationship the two brands are meant to have, which is the opposite of what the brief asked for.
 

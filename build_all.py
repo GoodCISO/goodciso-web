@@ -44,17 +44,22 @@ def write_site(site: Site, pages: list[Page], extra_assets: dict[str, str] | Non
     # and must never be served on the corporate site: a corporate favicon
     # that is the product's logo misrepresents the relationship between
     # the two brands.
-    # Favicon — per site, from the ORIGINAL brand artwork. The AWARE
-    # shield-and-checkmark is AWARE's mark and must never be served on the
-    # corporate site, where it misrepresents the relationship between the
-    # two brands.
+    #
+    # The corporate favicon is the ORIGINAL brand artwork on a navy tile.
+    # An SVG of it could not be traced faithfully — the trace lost the
+    # G-shaped counter — so the original pixels are what ship. The tile is
+    # not decoration: the artwork's counter is knocked out to transparency
+    # for the header, so without a fixed backdrop the G would read
+    # differently depending on the browser tab's colour.
     if site.key == "corporate":
-        # The corporate favicon is the ORIGINAL shield artwork. An SVG of
-        # it could not be traced faithfully — the trace lost the G-shaped
-        # counter — so the original pixels are what ship.
-        shield = B.BRAND_DIR / "goodciso-shield.png"
-        if shield.exists():
-            shutil.copy(shield, out / "favicon.png")
+        for asset in ("favicon-goodciso.png", "favicon-goodciso.ico", "apple-touch-icon.png"):
+            src = B.BRAND_DIR / asset
+            if src.exists():
+                shutil.copy(src, out / asset)
+        # /favicon.png is the name build.py links to.
+        png = B.BRAND_DIR / "favicon-goodciso.png"
+        if png.exists():
+            shutil.copy(png, out / "favicon.png")
     else:
         fav = B.BRAND_DIR / "favicon-aware.svg"
         if fav.exists():

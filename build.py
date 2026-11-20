@@ -206,6 +206,17 @@ body { font-feature-settings: "cv02","cv03","cv04","ss01"; }
   --gc-ok-bg:       #0E2418;
   --gc-code-bg:     #010409;
   --gc-code-text:   #E2E8F0;
+}
+
+/* The hero glow is a BRAND colour, so it must be overridden in BOTH
+   themes. It used to be set only inside [data-theme="dark"], which meant
+   the corporate site — which ships in light theme — rendered AWARE's
+   Signal green behind its teal logomark and teal buttons. A brand rule
+   that only applies in one theme is a bug waiting for a theme switch. */
+:root, [data-theme="light"] {
+  --gc-hero-glow:   rgba(0, 168, 150, 0.12);
+}
+[data-theme="dark"] {
   --gc-hero-glow:   rgba(0, 168, 150, 0.12);
 }
 
@@ -278,11 +289,24 @@ def render_page(site: Site, page: Page, nav_current: str = "") -> str:
     # entry point, and a 404 in the primary CTA is not a small defect.
     # The favicon differs per site: the corporate site serves the original
     # GoodCISO shield artwork, the AWARE sites their own mark.
-    icon_href, icon_type = (
-        ("/favicon.png", "image/png")
-        if site.key == "corporate"
-        else ("/favicon.svg", "image/svg+xml")
-    )
+    #
+    # The corporate site also gets the .ico and the apple-touch-icon, because
+    # a browser that asks for /favicon.ico or for the iOS home-screen icon
+    # gets a 404 otherwise — and a 404 there means the tab shows a broken
+    # default icon, which is the same defect as the wrong mark.
+    if site.key == "corporate":
+        icon_links = (
+            '<link rel="icon" href="/favicon.png" type="image/png">\n'
+            '<link rel="icon" href="/favicon.ico" sizes="any">\n'
+            '<link rel="apple-touch-icon" href="/apple-touch-icon.png">'
+        )
+    else:
+        icon_links = '<link rel="icon" href="/favicon.svg" type="image/svg+xml">'
+    # The browser chrome colour. The corporate site is GoodCISO navy; the
+    # AWARE sites are AWARE midnight. A hardcoded value shipped AWARE's
+    # midnight on goodciso.org, which put the product's colour in the
+    # corporate site's browser chrome.
+    theme_color = "#030712" if site.key == "corporate" else "#0B1220"
     cta = {
         "aware": ("/get-started", "Get started"),
         "corporate": ("/contact", "Contact us"),
@@ -307,8 +331,8 @@ def render_page(site: Site, page: Page, nav_current: str = "") -> str:
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{esc(page.title)} | {esc(site.title_suffix)}">
 <meta name="twitter:description" content="{esc(page.description)}">
-<meta name="theme-color" content="#0B1220">
-<link rel="icon" href="{icon_href}" type="{icon_type}">
+<meta name="theme-color" content="{theme_color}">
+{icon_links}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">

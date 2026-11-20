@@ -45,6 +45,13 @@ jobs:
         # here stops the deploy.
         run: python3.12 qa.py
 
+      - name: Prove the brand guard can fail
+        # The brand guard in qa.py is what stops AWARE's mark being served
+        # on goodciso.org again, as it was from 2026-11-16 to 2026-11-18.
+        # This step breaks each condition in turn and asserts the guard
+        # fires, so the guard cannot silently stop guarding.
+        run: python3.12 test_brand_guard.py
+
       - name: Record the build in the job summary
         if: always()
         run: |

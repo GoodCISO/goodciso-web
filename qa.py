@@ -83,6 +83,130 @@ def page_files(site: str) -> list[Path]:
     return sorted(p for p in root.rglob("*.html"))
 
 
+# --- brand guard -------------------------------------------------------
+#
+# GoodCISO and AWARE are distinct brands that share a component layer. The
+# failure mode that matters is not a wrong colour in a stylesheet — it is
+# one brand's MARK being served on the other's site, because a corporate
+# favicon that is the product's logo misrepresents the relationship between
+# the two companies.
+#
+# The mark is what a visitor sees before they read a word, and it is what
+# ends up in a browser history, a bookmark, and a shared link. So the
+# checks below run on the BUILT output, not the source: a file that exists
+# in assets/ but is never copied is exactly the bug this catches.
+
+# AWARE's Signal green. GoodCISO is teal; this green must never be the
+# resolved accent on the corporate site. It was the colour of the mark
+# wrongly served on goodciso.org from 2026-11-16 to 2026-11-18.
+AWARE_GREENS = {"#22c55e", "#16a34a"}
+
+# The tokens whose RESOLVED value decides the site's accent colour.
+ACCENT_TOKENS = ("--gc-accent", "--gc-accent-text", "--gc-accent-solid")
+
+
+def _css_rules(css: str) -> list[tuple[str, dict]]:
+    """(selector, {custom-property: value}) for every rule that declares one."""
+    css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
+    out = []
+    for m in re.finditer(r"([^{}]+)\{([^{}]*)\}", css):
+        sel = " ".join(m.group(1).split())
+        decls = {
+            d.group(1): d.group(2).strip()
+            for d in re.finditer(r"(--[A-Za-z0-9_-]+)\s*:\s*([^;]+);", m.group(2))
+        }
+        if decls:
+            out.append((sel, decls))
+    return out
+
+
+def _applies(sel: str, theme: str) -> bool:
+    """Does this selector apply in the given theme?
+
+    The custom properties are declared on :root, on [data-theme="light"]
+    and on [data-theme="dark"]. A rule for one theme must not be read as
+    the value for the other.
+    """
+    if "data-theme" in sel:
+        m = re.search(r'data-theme=["\']?(\w+)', sel)
+        return m is not None and m.group(1) == theme
+    # :root applies in both themes; a bare element selector applies in both.
+    return True
+
+
+def _resolve(vars_: dict, name: str, depth: int = 0):
+    """Resolve a custom property through var() references."""
+    if depth > 12:
+        return None
+    v = vars_.get(name)
+    if v is None:
+        return None
+    v = v.strip()
+    m = re.fullmatch(r"var\(\s*(--[A-Za-z0-9_-]+)\s*\)", v)
+    if m:
+        return _resolve(vars_, m.group(1), depth + 1)
+    return v
+
+
+def check_brand(site: str) -> list[str]:
+    """Brand bleed between the corporate site and the AWARE product sites."""
+    root = DIST / site
+    errors: list[str] = []
+    if not root.exists():
+        return errors
+
+    if site == "corporate":
+        # 1. The AWARE mark must not be served as the corporate favicon.
+        fav_png = root / "favicon.png"
+        if not fav_png.exists():
+            errors.append("corporate: no /favicon.png — the corporate mark is missing")
+        else:
+            # The corporate favicon is a PNG, so its bytes are compared to
+            # the committed brand asset rather than pattern-matched.
+            brand = Path(__file__).resolve().parent / "assets/brand/favicon-goodciso.png"
+            if brand.exists() and fav_png.read_bytes() != brand.read_bytes():
+                errors.append(
+                    "corporate: /favicon.png is not the GoodCISO brand asset — "
+                    "the corporate site must never serve the AWARE mark"
+                )
+
+        # 2. The corporate site's RESOLVED accent must be teal, in BOTH
+        # themes. The check resolves the cascade rather than grepping for a
+        # hex string: tokens.css is the shared base layer and legitimately
+        # carries a green ramp, which the corporate brand.css overrides.
+        # Grepping the bytes would flag the shared layer forever; resolving
+        # it catches the thing that actually reaches the screen.
+        assets = root / "assets"
+        try:
+            css = (assets / "tokens.css").read_text() + "\n" + (assets / "brand.css").read_text()
+        except OSError:
+            css = ""
+        if css:
+            rules = _css_rules(css)
+            for theme in ("light", "dark"):
+                merged: dict = {}
+                for sel, decls in rules:
+                    if _applies(sel, theme):
+                        merged.update(decls)
+                for token in ACCENT_TOKENS:
+                    resolved = _resolve(merged, token)
+                    if resolved and resolved.lower() in AWARE_GREENS:
+                        errors.append(
+                            f"corporate: {token} resolves to {resolved} in the "
+                            f"{theme} theme — that is AWARE's Signal green. "
+                            f"GoodCISO is teal."
+                        )
+    else:
+        # 3. The AWARE sites must serve the AWARE mark.
+        fav = root / "favicon.svg"
+        if not fav.exists():
+            errors.append(f"{site}: no /favicon.svg — the AWARE mark is missing")
+        elif b"22c55e" not in fav.read_bytes().lower():
+            errors.append(f"{site}: /favicon.svg is not the AWARE mark")
+
+    return errors
+
+
 def check_site(site: str) -> dict:
     root = DIST / site
     origin = SITE_ROOTS[site]
@@ -162,6 +286,9 @@ def check_site(site: str) -> dict:
 
     if not (root / "robots.txt").exists():
         errors.append("no robots.txt")
+
+    # --- brand ---
+    errors.extend(check_brand(site))
 
     return {"site": site, "pages": len(pages), "errors": errors, "warnings": warnings}
 
