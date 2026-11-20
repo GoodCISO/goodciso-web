@@ -72,23 +72,93 @@ def rules(css: str) -> list[tuple[str, dict]]:
 # :root must be merged for the dark theme too — otherwise a dark value of
 # var(--gc-slate-950) resolves to nothing.
 def applies(sel: str, theme: str) -> bool:
-    for p in [x.strip() for x in sel.split(",")]:
-        if p == ":root":
-            return True
-        if theme == "light" and p == '[data-theme="light"]':
-            return True
-        if theme == "dark" and p == '[data-theme="dark"]':
-            return True
-    return False
+    """Does this ONE selector part match in the given theme?
+
+    Only the theme attribute decides, because the raw palette lives on
+    :root in BOTH themes while the semantic tokens are theme-scoped.
+
+    A `:not([data-theme="X"])` constraint is honoured: the part cannot
+    match when the theme is X. That is how the light-theme fallback in
+    the component layer stays out of the dark theme.
+    """
+    if not sel:
+        return False
+    excluded = re.findall(r':not\(\s*\[data-theme="([a-z]+)"\]\s*\)', sel)
+    if theme in excluded:
+        return False
+    positive = re.findall(
+        r'\[data-theme="([a-z]+)"\]', re.sub(r":not\([^()]*\)", "", sel)
+    )
+    if positive and theme not in positive:
+        return False
+    return True
+
+
+def specificity(sel: str) -> tuple[int, int, int]:
+    """The (a, b, c) specificity a browser computes for one selector part.
+
+    Needed because the cascade is not source order alone: two rules with
+    different specificity compete, and the more specific one wins even if
+    it comes first.
+    """
+    # `:not(X)` contributes X's specificity and nothing of its own, so it
+    # is replaced by its argument before counting.
+    s = re.sub(r":not\(([^()]*)\)", r"\1", sel)
+    ids = len(re.findall(r"#[A-Za-z_][\w-]*", s))
+    s = re.sub(r"#[A-Za-z_][\w-]*", "", s)
+    attrs = len(re.findall(r"\[[^\]]*\]", s))
+    s = re.sub(r"\[[^\]]*\]", "", s)
+    classes = len(re.findall(r"\.[A-Za-z_][\w-]*", s))
+    s = re.sub(r"\.[A-Za-z_][\w-]*", "", s)
+    pseudos = len(re.findall(r":(?!:)[A-Za-z-]+", s))
+    s = re.sub(r":(?!:)[A-Za-z-]+", "", s)
+    types = len(re.findall(r"(?:^|[\s>+~])([A-Za-z][\w-]*)", s))
+    return (ids, attrs + classes + pseudos, types)
+
+
+def page_stylesheets(site: str) -> list[Path]:
+    """The stylesheets the BUILT page loads, in document order.
+
+    They are read from the built page rather than from a hardcoded list.
+    A stylesheet the page loads but the checker does not read is measured
+    wrong, and that is exactly how the button text colour escaped this
+    check: `base.css` declared a fallback for `--gc-accent-on-solid` and
+    the checker only read `tokens.css` and `brand.css`, so it measured a
+    value the browser never used.
+    """
+    page = DIST / site / "index.html"
+    if not page.exists():
+        return []
+    hrefs = re.findall(
+        r'<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"', page.read_text()
+    )
+    out: list[Path] = []
+    for href in hrefs:
+        if href.startswith(("http://", "https://", "//")):
+            continue  # a third-party sheet, not ours to resolve
+        out.append((DIST / site / href.lstrip("/")).resolve())
+    return out
 
 
 def theme_vars(site: str, theme: str) -> dict:
-    assets = DIST / site / "assets"
-    all_rules = rules((assets / "tokens.css").read_text()) + rules((assets / "brand.css").read_text())
+    """Resolve every custom property the page would have, for one theme."""
     merged: dict = {}
-    for sel, d in all_rules:
-        if applies(sel, theme):
-            merged.update(d)
+    best: dict = {}
+    order = 0
+    for path in page_stylesheets(site):
+        if not path.exists():
+            continue
+        for sel, d in rules(path.read_text()):
+            for part in [x.strip() for x in sel.split(",")]:
+                if not applies(part, theme):
+                    continue
+                spec = specificity(part)
+                for prop, val in d.items():
+                    prev = best.get(prop)
+                    if prev is None or (spec, order) >= prev:
+                        best[prop] = (spec, order)
+                        merged[prop] = val
+            order += 1
     return merged
 
 
@@ -166,6 +236,17 @@ def main() -> int:
                 ("on-solid on accent-solid", on_solid, v["gc-accent-solid"], 4.5),
                 ("focus vs bg (>=3)", v["gc-focus"], bg, 3.0),
                 ("border-strong vs bg (>=3)", v["gc-border-strong"], bg, 3.0),
+                # The focus ring is painted where the focused element SITS,
+                # not necessarily on the page background. `outline-offset: 2px`
+                # puts the ring outside the element's border box, so a link
+                # in a card is ringed against the card's surface, and a
+                # button in the header against the header's translucent
+                # surface. Checking the ring against --gc-bg alone would
+                # pass a ring that vanishes on the surface it is actually
+                # drawn on, so every surface a focusable element can sit on
+                # is checked. WCAG 2.2 SC 1.4.11 Non-text Contrast.
+                ("focus vs surface (>=3)", v["gc-focus"], surf, 3.0),
+                ("focus vs surface-2 (>=3)", v["gc-focus"], s2, 3.0),
             ]
             for label, fg, b, need in checks:
                 if not fg or not b:

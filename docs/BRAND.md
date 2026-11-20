@@ -208,6 +208,41 @@ Resolves the built CSS through the real cascade and checks every
 foreground/background pair against its WCAG 2.2 threshold, in both themes,
 on all four sites.
 
+It reads **the stylesheets the built page loads**, in document order, and
+resolves the custom properties with selector specificity. It does not
+read a hand-picked list of files: a stylesheet the page loads but the
+checker does not read is measured wrong, and that is how a button's text
+colour escaped this check — the component layer declared a fallback that
+the checker never saw, so the check measured a value the browser never
+used, and the dark theme shipped white-on-green at 2.28:1.
+
+The measured ratios, the thresholds, and the two brand traps (the brand
+colour failing AA as text, and the focus ring needing the same treatment)
+are documented in `packages/design-tokens/README.md`. That is the file
+`tokens.css` cites when it says the ratios are computed and verified there,
+so the citation and the document now agree.
+
+### JavaScript
+
+```bash
+python3.12 build_all.py && python3.12 test_javascript.py
+```
+
+Parses every script the built pages load. `site.js` shipped with an
+unclosed `if` block, so the browser rejected the whole file and the theme
+toggle and the mobile navigation did nothing on every page of every site.
+No other gate looked at JavaScript, so the build stayed green.
+
+### Component spec
+
+```bash
+python3.12 build_all.py && python3.12 qa.py
+```
+
+`qa.py` fails the build if a class is in the component layer and not in
+`packages/ui/README.md`, or in the spec and not in the layer. The spec is
+the contract; the CSS is the implementation.
+
 ### Manual — after any brand change
 
 1. Open the corporate site and confirm the tab shows the **teal shield with

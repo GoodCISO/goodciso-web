@@ -425,6 +425,110 @@ def check_site(site: str) -> dict:
     return {"site": site, "pages": len(pages), "errors": errors, "warnings": warnings}
 
 
+def strip_css_comments(css: str) -> str:
+    """Remove CSS comments.
+
+    A comment can mention a class that the layer does not actually
+    define — the layer's own comments explain the grid bug by naming
+    `.gc-grid-2` — and a check that reads comments would demand a spec
+    for classes that do not exist.
+    """
+    return re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
+
+
+def css_class_selectors(css: str) -> list[str]:
+    """Every class named by a SELECTOR in the stylesheet.
+
+    Only the selector part of a rule is read, never a declaration value,
+    so a decimal in a value (`.9em`) cannot be mistaken for a class.
+    """
+    css = strip_css_comments(css)
+    found: set[str] = set()
+    for selector in re.findall(r"([^{}]+)\{", css):
+        # A selector list: `.a, .b` — every part counts.
+        for m in re.finditer(r"\.([A-Za-z_][\w-]*)", selector):
+            found.add(m.group(1))
+    return sorted(found)
+
+
+def check_component_spec() -> list[str]:
+    """Every component in the layer must be specified.
+
+    The previous site shipped four components with no specification at all —
+    `arch-flow`, `stats-bar`, `compliance-grid` and `.trust-badge-note` —
+    so nobody could tell whether they were correct and a coder could not
+    know when it was safe to use one. The component spec
+    (`packages/ui/README.md`) is what stops that happening again.
+
+    A check that cannot fail is not a check, so this one is proven to fire
+    by `test_component_spec.py`.
+    """
+    errors: list[str] = []
+    repo = Path(__file__).parent.resolve()
+    layer = repo / "packages/ui/src/base.css"
+    spec = repo / "packages/ui/README.md"
+    if not layer.exists():
+        return ["component spec: packages/ui/src/base.css is missing"]
+    if not spec.exists():
+        return [
+            "component spec: packages/ui/README.md is missing — every component "
+            "in the layer must be specified, or a coder cannot know when to "
+            "use one"
+        ]
+    css = layer.read_text(encoding="utf-8")
+    text = spec.read_text(encoding="utf-8")
+    # Every class in the layer, wherever it is declared.
+    #
+    # The first version of this check matched only classes at the START of
+    # a line (`^\.(gc-...)`). Two classes in the layer — `.gc-mt-6` and
+    # `.gc-mt-12` — are declared mid-line, so the check could not see
+    # them, and a component added mid-line would have shipped with no
+    # specification and no error. The match is now on the selector, not on
+    # where it sits in the line.
+    classes = css_class_selectors(css)
+    # The class must appear as a WORD in the spec. A substring test would
+    # pass for a class whose name is a prefix of another ("gc-list" is a
+    # substring of "gc-list-item"), so removing a component from the spec
+    # could still find its name elsewhere in the prose and go unreported.
+    for c in classes:
+        if not re.search(rf"(?<![A-Za-z0-9_-]){re.escape(c)}(?![A-Za-z0-9_-])", text):
+            errors.append(
+                f"component spec: .{c} is in the layer but not specified in "
+                f"packages/ui/README.md"
+            )
+    # And the other direction: a class the spec documents that the layer
+    # does not define is a specification of something that does not exist.
+    # A coder reading the spec would use it, and it would do nothing.
+    for c in spec_class_names(text):
+        if c not in classes:
+            errors.append(
+                f"component spec: .{c} is specified in packages/ui/README.md "
+                f"but is not in the layer"
+            )
+    return errors
+
+
+def spec_class_names(spec: str) -> list[str]:
+    """The class names the spec documents.
+
+    Only names written as CSS class tokens — in backticks, or at the start
+    of a table cell — count. Prose that mentions a class in passing, like
+    the `.gc-grid-2` in the explanation of a past bug, is not a
+    specification of a component.
+    """
+    names: set[str] = set()
+    # A table cell that names the class: `| `gc-btn` | ... |`
+    for cell in re.findall(r"^\|\s*`([A-Za-z_][\w-]*)`", spec, re.M):
+        names.add(cell)
+    # A comma-separated list in one cell: `| `gc-mt-4`, `gc-mt-6` | ... |`
+    for cell in re.findall(r"^\|\s*`([A-Za-z_][\w-]*)`\s*,\s*`([A-Za-z_][\w-]*)`", spec, re.M):
+        names.update(cell)
+    # A bare class token in backticks anywhere: `gc-btn-primary`
+    for m in re.finditer(r"`([A-Za-z_][\w-]*)`", spec):
+        names.add(m.group(1))
+    return sorted(n for n in names if n.startswith("gc-") or n == "skip-link")
+
+
 def main():
     all_res = []
     for site in SITE_ROOTS:
@@ -439,7 +543,17 @@ def main():
         for w in r["warnings"][:10]:
             print("    WARN   ", w)
 
-    total_err = sum(len(r["errors"]) for r in all_res)
+    # The component spec is a whole-repo check, not a per-site one: the layer
+    # and its spec are shared by every site.
+    spec_errors = check_component_spec()
+    if spec_errors:
+        print(f"[FAIL] component spec  {len(spec_errors)} errors")
+        for e in spec_errors[:25]:
+            print("    ERROR  ", e)
+    else:
+        print("[PASS] component spec  every component in the layer is specified")
+
+    total_err = sum(len(r["errors"]) for r in all_res) + len(spec_errors)
     print(f"\nTOTAL ERRORS: {total_err}")
     return 1 if total_err else 0
 

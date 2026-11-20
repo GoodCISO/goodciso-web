@@ -48,17 +48,30 @@ jobs:
       - name: Check the contrast of the built tokens
         # Measures every semantic token pair in the BUILT css against the
         # WCAG 2.2 threshold, resolving the custom properties through the
-        # real cascade. It reads dist/, so it measures what ships. A missing
+        # real cascade. It reads the stylesheets the built page loads, so
+        # a value the browser never uses cannot be measured. A missing
         # or unbuilt site fails rather than being skipped: a check that
         # cannot fail is not a check.
         run: python3.12 contrast.py
 
-      - name: Prove the brand guard can fail
-        # The brand guard in qa.py is what stops AWARE's mark being served
-        # on goodciso.org again, as it was from 2026-11-16 to 2026-11-18.
-        # This step breaks each condition in turn and asserts the guard
-        # fires, so the guard cannot silently stop guarding.
-        run: python3.12 test_brand_guard.py
+      - name: Check the shipped JavaScript parses
+        # site.js shipped with an unclosed `if` block, so the browser
+        # rejected the whole file and the theme toggle and the mobile
+        # navigation did nothing on every page of every site. Nothing in
+        # the QA gate looked at JavaScript, so the build stayed green.
+        run: python3.12 test_javascript.py
+
+      - name: Prove the checks can fail
+        # A check that cannot fail is not a check. The brand guard in
+        # qa.py is what stops AWARE's mark being served on goodciso.org
+        # again, as it was from 2026-11-16 to 2026-11-18. The component-spec
+        # check is what stops a component shipping with no specification,
+        # as four did on the previous site. These steps break each guarded
+        # condition in turn and assert the guard fires, so neither guard can
+        # silently stop guarding.
+        run: |
+          python3.12 test_brand_guard.py
+          python3.12 test_component_spec.py
 
       - name: Record the build in the job summary
         if: always()

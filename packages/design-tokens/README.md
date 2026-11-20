@@ -59,8 +59,16 @@ matter more than the numbers it prints:
 
 ## Measured ratios
 
-Every value below was produced by `contrast.py` on 2026-11-18 against the
-built output. All 88 checks pass.
+Every value below was produced by `contrast.py` on 2026-11-20 against the
+built output. All 104 checks pass — 13 pairs per theme, in both themes, on
+four sites.
+
+`contrast.py` reads the stylesheets **the built page actually loads**, in
+document order, and resolves the custom properties through the cascade
+with selector specificity. It does not read a hand-picked list of files:
+a stylesheet the page loads but the checker does not read is measured
+wrong, and that is how the button text colour escaped this check once
+already (see the note in `packages/ui/README.md` under Buttons).
 
 ### Corporate (`goodciso.org`)
 

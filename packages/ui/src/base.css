@@ -132,7 +132,25 @@ code, kbd, pre { font-family: var(--gc-font-mono); font-size: 0.9em; }
    other theme. */
 .gc-btn-primary { background: var(--gc-accent-solid); color: var(--gc-accent-on-solid, var(--gc-surface)); border-color: var(--gc-accent-solid); }
 .gc-btn-primary:hover { background: var(--gc-accent-hover); border-color: var(--gc-accent-hover); }
-:root, [data-theme="light"] { --gc-accent-on-solid: #FFFFFF; }
+/* The FALLBACK for --gc-accent-on-solid, and only a fallback.
+   It must be scoped to the LIGHT theme alone.
+
+   It used to read `:root, [data-theme="light"]`, which put the fallback on
+   `:root` as well. `:root` and `[data-theme="dark"]` have the SAME
+   specificity (0,1,0), so in the dark theme the LATER stylesheet wins —
+   and base.css loads after tokens.css. The dark-theme token in
+   tokens.css was therefore overridden by this fallback, and every solid
+   button on aware/docs/demo rendered WHITE on Signal green: 2.28:1,
+   where WCAG 2.2 AA needs 4.5:1.
+
+   A fallback belongs where it is used, not on the root. Scoped to
+   `[data-theme="light"]` it loses to the dark-theme token (same
+   specificity, tokens.css loads later) and it also stops overriding the
+   corporate brand's own value in brand.css.
+
+   The `:root` selector is kept ONLY for pages that carry no data-theme
+   attribute at all, which is the light-theme default. */
+:root:not([data-theme="dark"]) { --gc-accent-on-solid: #FFFFFF; }
 .gc-btn-secondary { background: var(--gc-surface); color: var(--gc-text); border-color: var(--gc-border-strong); }
 .gc-btn-secondary:hover { background: var(--gc-surface-2); }
 .gc-btn-ghost { background: transparent; color: var(--gc-text-muted); }

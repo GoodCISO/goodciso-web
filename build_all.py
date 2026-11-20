@@ -133,6 +133,7 @@ SITE_JS = r"""
   try { stored = localStorage.getItem('gc-theme'); } catch (e) {}
   if (stored) {
     root.setAttribute('data-theme', stored);
+  }
 
   document.querySelectorAll('[data-theme-toggle]').forEach(function (btn) {
     btn.addEventListener('click', function () {
