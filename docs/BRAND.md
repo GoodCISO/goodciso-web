@@ -47,9 +47,55 @@ appears". A row marked **missing** is work not yet done.
 | Header logomark | `assets/brand/goodciso-shield.png` | shipped |
 | Header wordmark | live text: "Good" bold + "CISO" caps | shipped |
 | Social / OG image | `assets/brand/generated/og-corporate.png` → `/og.png` | shipped |
-| LinkedIn / company avatar | — | **not in this repo** |
-| Email signature | — | **not in this repo** |
-| Sales deck | `GoodCISO-AWARE-Deck.pptx` (old repo) | **not in this repo** |
+| LinkedIn / company avatar | `assets/brand/generated/linkedin-avatar-goodciso.png` | shipped 2026-11-20 (LinkedIn CDN: `goodciso_logo`) |
+| LinkedIn / company cover | `assets/brand/generated/linkedin-cover-goodciso.png` | shipped 2026-11-20 (LinkedIn CDN: `goodciso_cover`) |
+| GitHub org avatar | `github.com/GoodCISO` | shipped — teal shield with amber dot |
+| Email signature | — | **no mark** — see below |
+| Sales deck | `GoodCISO-AWARE-Deck.pptx` (old repo) | **no mark** — see below |
+
+#### The off-repo surfaces, in detail
+
+These surfaces live outside this repository, so CI cannot guard them and
+they drift. All of them were audited on 2026-11-20 by reading the pixels
+that are actually served, not by reading a filename. The two that carried
+the wrong thing were corrected; the generator that produces the assets is
+`make_offsite_assets.py`, which builds them from the same committed
+sources the website uses, so an off-repo surface cannot drift from the
+mark that ships.
+
+| Surface | Where it lives | What it carried | Now |
+|---|---|---|---|
+| LinkedIn company avatar | `linkedin.com/company/goodciso` → Company Page Admin | An **unsaturated photo** — a greyscale image, max channel spread = 0 — uploaded 2024-09-19. Not a brand mark at all. | The corporate mark on the navy tile. Verified live on LinkedIn's CDN (`goodciso_logo`): teal shield, G-counter, amber dot; **0** AWARE-green pixels. |
+| LinkedIn company cover | same | **ChangTech's** asset — a generic sunset stock photo whose CDN filename was literally `changtech_consultants_cover`, uploaded 2020-10-28. A cross-brand error, not a wrong-mark one. | The GoodCISO cover. Verified live on LinkedIn's CDN (`goodciso_cover`): teal shield with the amber dot, the "Good CISO" lockup and the tagline; **0** AWARE-green pixels. |
+| GitHub org avatar | `github.com/GoodCISO` (org, not the `aware` repo) | The corporate mark — teal shield, amber dot, **0** green pixels. | Correct already. Left alone. Note the distinction: the **org** avatar is the company's; the **product** is the repo `GoodCISO/aware` under it. |
+| Email signature | Gmail send-as `alvin@goodciso.org` (`gws-goodciso`) | `signature: ""` — **empty**. The block Alvin sends from is typed into the body. | Nothing to fix: there is no mark to be wrong. The ChangTech lane (`alvin@changtech.net`) is likewise text-only. |
+| Sales deck | `~/projects/goodciso-website/GoodCISO-AWARE-Deck.pptx` | **No mark of any kind.** The package has no `ppt/media/` directory at all: zero `<a:blip>`, zero `p:pic`, zero `<a:path>` in any slide. Every slide's palette is `00A896 / 0B1120 / 94A3B8 / FFFFFF` — teal, no green. The wordmark is live text reading "AWARE", which is correct for an AWARE pitch deck. | Nothing to fix. Not a wrong-mark defect but a missing-mark one, and the deck is a binary asset that must not be re-authored. |
+
+**The predicted defect was not the one that was there.** The hypothesis was
+that these surfaces carried AWARE's green shield-and-check. **None of them
+did.** The avatar carried no mark, the cover carried another company's
+stock photograph, and the signature and the deck carry no mark at all. The
+AWARE mark appears only on the AWARE sites, which is where it belongs.
+
+**Rule 1 applies off-repo too.** A mark never crosses sites — and a
+corporate surface must never carry the product's mark *or another
+company's asset*. The guard in `qa.py` cannot see a LinkedIn page, which
+is why the two LinkedIn surfaces needed fixing by hand rather than by CI.
+
+#### Surfaces checked and found to carry nothing to fix
+
+Also audited on 2026-11-20, and left unchanged because they carry no mark,
+or already carry the right one:
+
+| Surface | What it carries |
+|---|---|
+| LinkedIn post backgrounds (`galapagos-inFeedBackgroundImage`) | Photographs and illustrations. No mark. |
+| LinkedIn carousel (`visuals/carousel-2026-08-11/*.png`, 7 files, old repo) | A **teal** G logomark and the wordmark in caps with a **teal** period dot. No green — the mark is corporate. It is not the canonical lockup (§1: "Good" bold + "CISO" caps, no dot; the amber dot belongs to the shield), and it is a published LinkedIn post, so the PNG is not the live artefact. Canonicalisation is tracked separately; it is not a cross-brand defect. |
+| Old repo `favicon.svg` | A simplified teal shield on navy — no amber dot, no G counter. The superseded repo is not deployed. |
+| X / Twitter `@goodciso` avatar | A small monochrome glyph. No brand colour, no shield. |
+| Google Site "GoodCISO" (Drive) | An unused Google Sites template. No GoodCISO logo. |
+| Sent mail from `alvin@goodciso.org` | No GoodCISO mark. The only images in 40 sent messages are third-party logos (a RELX/LexisNexis/Elsevier strip on a job application) and a `far.ai` hosted image — not brand marks. |
+| `npm @goodciso/aware`, PyPI | No logo asset published. |
 
 ### AWARE (aware.goodciso.org, docs…, demo…)
 

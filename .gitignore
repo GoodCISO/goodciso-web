@@ -13,3 +13,11 @@ assets/brand/Inter.ttf
 assets/brand/generated/*
 !assets/brand/generated/og-corporate.png
 !assets/brand/generated/og-aware.png
+
+# The off-repo brand assets ARE committed too. They are not a build
+# input, but they are the exact files uploaded to a third-party surface
+# (LinkedIn), so the bytes that are live must be recoverable from the
+# repository rather than from one operator's Downloads folder. They are
+# regenerable with `python3.12 make_offsite_assets.py`.
+!assets/brand/generated/linkedin-avatar-goodciso.png
+!assets/brand/generated/linkedin-cover-goodciso.png
