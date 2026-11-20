@@ -143,9 +143,48 @@ code, kbd, pre { font-family: var(--gc-font-mono); font-size: 0.9em; }
 .gc-card { background: var(--gc-surface); border: 1px solid var(--gc-border); border-radius: var(--gc-radius-lg); padding: var(--gc-space-6); }
 .gc-card h3 { font-size: var(--gc-text-lg); margin-bottom: var(--gc-space-2); }
 .gc-grid { display: grid; gap: var(--gc-space-5); }
-.gc-grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-.gc-grid-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
-.gc-grid-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+/* The class name is the column count, so the layout must honour it.
+   These used to be repeat(auto-fit, minmax(...)), which silently ignored
+   the number in the name: at the 1133px container, gc-grid-2 rendered THREE
+   columns and gc-grid-3 rendered FOUR. A grid of 4 items in a "2" grid then
+   left an orphaned fourth card on its own row, and a grid of 6 in a "3"
+   grid left two. That affected 11 grids across 8 pages.
+   repeat(N, 1fr) makes the name true; the responsive collapse below keeps
+   it usable on narrow screens. */
+.gc-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.gc-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.gc-grid-4 { grid-template-columns: repeat(4, 1fr); }
+/* Five across: the T0-T4 tier ladder is five levels and reads as a
+   progression, so it must be one row, not a grid with orphans. */
+.gc-grid-5 { grid-template-columns: repeat(5, 1fr); }
+
+/* The collapse targets are chosen so that no grid leaves a LONELY card on
+   its last row. Every grid in the site holds one of: 2, 3, 4, 5 or 6
+   items, so the safe column counts per item count are:
+       5 items -> 5, 3, 1     (4 and 2 leave one card alone)
+       4 items -> 4, 2, 1     (3 leaves one card alone)
+       3 items -> 3, 1        (2 leaves one card alone)
+       6 items -> 6, 3, 2, 1  (5 and 4 leave one card alone)
+   A grid of 2 collapses to 1 column at every size — a two-up row is
+   readable at any width, and stacking it wastes vertical space.
+   The ladder therefore goes 5 -> 3 -> 1 for the tier grids and 4 -> 2 -> 1
+   for the rest, with no step that strands a single card. */
+@media (max-width: 1100px) {
+  .gc-grid-5 { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 900px) {
+  .gc-grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .gc-grid-5 { grid-template-columns: 1fr; }
+  /* A 3-up grid drops to ONE column, not two. Two columns would leave the
+     third card alone on its own row — the exact defect this ladder exists
+     to prevent — and the common design-system behaviour for a three-up
+     row is to stack it, not to leave a half-width orphan. */
+  .gc-grid-3 { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .gc-grid-2, .gc-grid-3, .gc-grid-4, .gc-grid-5 { grid-template-columns: 1fr; }
+}
 
 /* ---- Eyebrow / badge ---- */
 .gc-eyebrow { display: inline-block; font-size: var(--gc-text-xs); font-weight: var(--gc-weight-semibold); letter-spacing: var(--gc-tracking-wide); text-transform: uppercase; color: var(--gc-accent-text); margin-bottom: var(--gc-space-3); }

@@ -307,7 +307,7 @@ PAGES = [
   <p class="gc-hero-sub">Five levels classify how much autonomy an agent is granted. Every agent is assigned a level before it acts, and promotions are recorded as validated events.</p>
 </div></section>
 <section class="gc-section"><div class="gc-container">
-  <div class="gc-grid gc-grid-3">
+  <div class="gc-grid gc-grid-5">
     <div class="gc-card"><span class="gc-term">T0</span><h3 class="gc-mt-4">Audit Trail</h3><p class="gc-muted">Every action is logged. Foundational, always on.</p></div>
     <div class="gc-card"><span class="gc-term">T1</span><h3 class="gc-mt-4">Crypto Identity</h3><p class="gc-muted">Every agent gets a non-human identity. Foundational, always on.</p></div>
     <div class="gc-card"><span class="gc-term">T2</span><h3 class="gc-mt-4">Guardrailed</h3><p class="gc-muted">Operational policies constrain what the agent can do.</p></div>
