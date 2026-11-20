@@ -61,6 +61,31 @@ The workflow deploys through the Netlify API using `deploy.py`, which zips `dist
 | `NETLIFY_BUILD_HOOK_DEMO` | Build hook for demo.aware.goodciso.org — registered, kept as a fallback |
 | `NETLIFY_BUILD_HOOK_CORPORATE` | Build hook for goodciso.org — registered, kept as a fallback |
 
+**The build hooks are live.** Verified 2026-11-18: each of the four sites
+reports exactly one build hook, titled `github-ci`, on branch `main`, and the
+ids match `deploy/build_hooks.json` exactly.
+
+| Site | Site id | Hook id |
+|---|---|---|
+| goodciso.org | `e7f43642-d6f1-4625-a4c9-3cfdb0525446` | `6afb6f7b101f7f29df996311` |
+| aware.goodciso.org | `628c454e-0569-4664-a61c-792f3c0a3420` | `6afb6f7965d98bebb9bb3e69` |
+| docs.aware.goodciso.org | `916fcf43-c51b-4198-a268-4384c4d90a4c` | `6afb6f7a69af9414a81c55ba` |
+| demo.aware.goodciso.org | `66acc7fe-692f-440b-a9e9-1437010ccc03` | `6afb6f7befb9691c5d6361c8` |
+
+**How to read them.** The endpoint is
+`GET /api/v1/sites/{site_id}/build_hooks`. The paths `/api/v1/hooks` and
+`/api/v1/build_hooks` return **404 for a token that is otherwise valid** —
+including both Netlify accounts on this host — so a 404 there is not evidence
+that a hook is missing or deleted. Do not read it that way.
+
+**They are a fallback, not the deploy path.** CI deploys through the API
+(`deploy.py` posts a zip to `/sites/{id}/deploys`); the hook is the manual
+route for a one-off rebuild from the Netlify dashboard. The workflow does not
+reference `secrets.NETLIFY_BUILD_HOOK_*`, so those secrets are deliberately
+not load-bearing. GitHub does not allow a secret's value to be read back, so
+the secret values cannot be compared against the hook ids from here; the ids
+in `deploy/build_hooks.json` are the record of truth.
+
 ### Deploying by hand
 
 ```bash
@@ -86,10 +111,10 @@ Every script derives the repository root from its own location, and host-only pa
 | Name | Purpose |
 |---|---|
 | `NETLIFY_AUTH_TOKEN` | The Netlify credential used by `deploy.py` in CI |
-| `NETLIFY_BUILD_HOOK_AWARE` | Netlify build hook for aware.goodciso.org — registered, kept as a fallback |
-| `NETLIFY_BUILD_HOOK_DOCS` | Netlify build hook for docs.aware.goodciso.org — registered, kept as a fallback |
-| `NETLIFY_BUILD_HOOK_DEMO` | Netlify build hook for demo.aware.goodciso.org — registered, kept as a fallback |
-| `NETLIFY_BUILD_HOOK_CORPORATE` | Netlify build hook for goodciso.org — registered, kept as a fallback |
+| `NETLIFY_BUILD_HOOK_AWARE` | Netlify build hook for aware.goodciso.org — live, kept as a fallback (see above) |
+| `NETLIFY_BUILD_HOOK_DOCS` | Netlify build hook for docs.aware.goodciso.org — live, kept as a fallback (see above) |
+| `NETLIFY_BUILD_HOOK_DEMO` | Netlify build hook for demo.aware.goodciso.org — live, kept as a fallback (see above) |
+| `NETLIFY_BUILD_HOOK_CORPORATE` | Netlify build hook for goodciso.org — live, kept as a fallback (see above) |
 
 ### On-host credential files (not in the repository)
 
@@ -109,7 +134,7 @@ The token never appears in a remote URL, in `.git/config`, in a process argument
 |---|---|
 | `~/.openclaw/credentials/github-pat.env` | The source of truth. Mode `0600`. Read at use time by the git credential helper. |
 | `~/.netrc` | **The one that actually authenticates.** `git-remote-https` delegates the HTTP layer to curl, and curl reads `~/.netrc` for `machine github.com` credentials. |
-| macOS keychain (`github.com`, protocol `htps`) | Backs `osxkeychain`, first in the global helper list. |
+| macOS keychain (`github.com`, protocol `htps`) | Backs `osxkeychain`, first in the global helper list. **See the keychain correction below — the live entry does not currently satisfy this row.** |
 | `~/bin/git-credential-github-alvin` | The git credential helper; reads the credential file. |
 
 **The `.netrc` is the one that matters, and it is the one that is easy to miss.** Because curl reads it directly, it overrides whatever git's credential chain resolves — the helper, the keychain, everything. A stale `.netrc` entry therefore silently wins, and the failure looks exactly like a scope problem:
@@ -160,9 +185,14 @@ p.write_text(re.sub(r"(machine\s+github\.com.*?password\s+)\S+", lambda m: m.gro
 os.chmod(p, 0o600)
 PY
 
-# 3. The keychain, which osxkeychain reads first
-security delete-internet-password -s github.com -a alvin-chang -p htps
-security add-internet-password -U -s github.com -a alvin-chang -p htps -w "$NEW"
+# 3. The keychain, which osxkeychain reads first.
+#    NOTE THE FLAG: the protocol is -r, NOT -p.
+#    `security -p` sets the item's PATH; `-r` sets its PROTOCOL.
+#    git-credential-osxkeychain looks up by protocol, so an entry written
+#    with `-p htps` stores path="htps" and protocol=<unset>, and the helper
+#    cannot find it. Verified 2026-11-18 in a scratch keychain.
+security delete-internet-password -s github.com -a alvin-chang -r htps
+security add-internet-password -U -s github.com -a alvin-chang -r htps -w "$NEW"
 
 # 4. Confirm every holder agrees
 python3 - <<'PY'
@@ -178,15 +208,67 @@ for line in Path("/Users/alfie/.openclaw/credentials/github-pat.env").read_text(
 nr = re.search(r"machine\s+github\.com.*?password\s+(\S+)", Path(os.path.expanduser("~/.netrc")).read_text(), re.S).group(1)
 r = subprocess.run(["git","credential","fill"], input="protocol=https\nhost=github.com\n\n", capture_output=True, text=True)
 helper = [l.split("=",1)[1] for l in r.stdout.splitlines() if l.startswith("password=")][0]
-kc = subprocess.run(["security","find-internet-password","-s","github.com","-p","htps","-w"], capture_output=True, text=True).stdout.strip()
-print("  credential file:", tok == tok)
+kc = subprocess.run(["security","find-internet-password","-s","github.com","-r","htps","-w"], capture_output=True, text=True).stdout.strip()
+print("  credential file:", bool(tok), "(read from the source of truth)")
 print("  .netrc         :", nr == tok)
 print("  git helper     :", helper == tok)
-print("  macOS keychain :", kc == tok)
+print("  macOS keychain :", (kc == tok) if kc else "ABSENT - no protocol-tagged entry")
+# A stale holder wins, so the check must be able to FAIL. Exit non-zero if
+# any holder disagrees, so a rotation that missed one cannot pass silently.
+disagree = [n for n, v in ((".netrc", nr), ("git helper", helper), ("keychain", kc)) if v and v != tok]
+print("  RESULT         :", "ALL HOLDERS AGREE" if not disagree else "DISAGREE: " + ", ".join(disagree))
+raise SystemExit(1 if disagree else 0)
 PY
 ```
 
 Token scope required on Netlify: site read/write, domain read/write, build-hook read/write, deploy read/write.
+
+### The keychain entry is currently WRONG — and it is why nothing has broken
+
+**State as verified 2026-11-18.** The live keychain entry for `github.com` was
+written with `-p htps`. `security` stores that as `path="htps"` with
+`protocol=<unset>`, so:
+
+- `git-credential-osxkeychain get` for `protocol=https` returns **nothing** —
+  the helper matches on protocol, and this entry has none.
+- `security find-internet-password -s github.com -p htps -w` **does** return
+  the password, because it matches on path.
+
+That mismatch is why the token rotation has never broken a push. The two
+holders that actually authenticate are `~/.netrc` (curl reads it directly) and
+the git credential helper (`~/bin/git-credential-github-alvin`), and both hold
+the current token. The keychain entry is a **third copy that git cannot see** —
+it is stale by construction and will keep the *old* token after the next
+rotation, because the procedure above used `-p` for both delete and add.
+
+**Proof that the helper matches protocol and not path.** In a scratch keychain,
+an entry created with `-r htps` was found by the helper when it asked for
+`protocol=https`; an entry created with `-p https` was not. Both entries had
+the same server and account.
+
+**To repair it**, replace the path-tagged entry with a protocol-tagged one.
+This deletes and rewrites a live keychain item, so it is deliberately NOT done
+by the build or by a doc edit:
+
+```bash
+# Read the current token out of the credential file — never from the keychain.
+NEW=$(grep '^GITHUB_TOKEN=' ~/.openclaw/credentials/github-pat.env | cut -d= -f2-)
+
+# Remove the path-tagged entry (matched by path) AND any protocol-tagged one.
+security delete-internet-password -s github.com -a alvin-chang -p htps
+security delete-internet-password -s github.com -a alvin-chang -r htps
+
+# Write it with the protocol set, which is what the helper reads.
+security add-internet-password -U -s github.com -a alvin-chang -r htps -w "$NEW"
+
+# Verify all four holders agree.
+printf 'protocol=https\nhost=github.com\nusername=alvin-chang\n\n' \
+  | /Applications/Xcode.app/Contents/Developer/usr/libexec/git-core/git-credential-osxkeychain get
+```
+
+Until that repair happens, the keychain is not a real fourth holder: it is a
+copy that no reader consults. Treat the three working holders (credential
+file, `.netrc`, git helper) as the chain that must be kept in agreement.
 
 ---
 
