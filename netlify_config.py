@@ -54,6 +54,35 @@ CORPORATE_REDIRECTS = [
 # machine is a file that silently disappears from production.
 CORPORATE_PRESERVED = ["llms.txt", "agent-instructions.txt", "security.txt"]
 
+# RFC 8461 (MTA-STS). The DNS TXT record for _mta-sts.goodciso.org says
+# `v=STSv1; id=20260810232500Z` and the policy must be fetched from
+# mta-sts.goodciso.org/.well-known/mta-sts.txt — that hostname is a CNAME to
+# this site's Netlify host, so the policy has to be served BY this site.
+#
+# It was not, and the record says mode: enforce, so a sender that honours
+# MTA-STS fetches the policy, gets the 404 page, and treats the domain as
+# having no policy — which is exactly what the enforce record was meant to
+# prevent. The policy id below must match the DNS TXT id, or senders
+# re-fetch on every check.
+#
+# Same dot-directory problem as security.txt: Netlify's deploy API does not
+# ingest dot-directories from a zipped upload, so the policy is written to a
+# normal path and served at /.well-known/ through a redirect rule.
+MTA_STS_POLICY_PATH = "mta-sts-policy.txt"
+MTA_STS_POLICY_ID = "20260810232500Z"
+
+# Every MX host that must appear in the policy, taken from the live DNS MX
+# records for goodciso.org. These are listed EXPLICITLY, not as wildcards:
+# "*.aspmx.l.google.com" matches subdomains of aspmx.l.google.com, so it
+# does NOT match aspmx.l.google.com itself — the primary exchanger.
+MTA_STS_EXPECTED_MX = (
+    "aspmx.l.google.com",
+    "alt1.aspmx.l.google.com",
+    "alt2.aspmx.l.google.com",
+    "alt3.aspmx.l.google.com",
+    "alt4.aspmx.l.google.com",
+)
+
 # Netlify's deploy API does not ingest dot-directories from a zipped upload:
 # .well-known/security.txt was silently dropped from the file list. RFC 9116
 # wants that file at /.well-known/security.txt, and the live site already
@@ -152,6 +181,17 @@ def main():
         "  status = 200\n"
         "  force = true\n"
     )
+    # MTA-STS policy — RFC 8461. mta-sts.goodciso.org is a CNAME to this
+    # site's Netlify host, so this rule is what serves the policy at the
+    # path a sender actually fetches. It must be 200 with the policy body:
+    # a redirect stub or a 404 tells the sender there is no policy.
+    extra += (
+        "\n[[redirects]]\n"
+        '  from = "/.well-known/mta-sts.txt"\n'
+        f'  to = "/{MTA_STS_POLICY_PATH}"\n'
+        "  status = 200\n"
+        "  force = true\n"
+    )
     # Copy the preserved AI-agent surface from the live repo if present.
     # The previous corporate site's build tree, where the AI-agent surface
     # (llms.txt, agent-instructions.txt) and security.txt live. It is a
@@ -183,6 +223,43 @@ def main():
     if sec.exists():
         (d / SECURITY_TXT_PATH).write_text(sec.read_text(encoding="utf-8"), encoding="utf-8")
         copied.append(SECURITY_TXT_PATH)
+    # MTA-STS policy — RFC 8461. Served from this site because
+    # mta-sts.goodciso.org is a CNAME to this site's Netlify host.
+    mta = ROOT / "assets" / "site" / MTA_STS_POLICY_PATH
+    if mta.exists():
+        policy = mta.read_text(encoding="utf-8")
+        # The policy id and the DNS TXT id must agree. If they diverge,
+        # senders re-fetch the policy on every delivery attempt and the
+        # record's cache is worthless — so this fails the build instead.
+        if f"id: {MTA_STS_POLICY_ID}" not in policy:
+            raise SystemExit(
+                f"[netlify] FATAL: {MTA_STS_POLICY_PATH} does not carry id: {MTA_STS_POLICY_ID}. "
+                "The DNS TXT record _mta-sts.goodciso.org must carry the same id."
+            )
+        # The mx list must cover every live MX host. A wildcard such as
+        # *.aspmx.l.google.com matches only SUBDOMAINS, so it does not cover
+        # the apex host aspmx.l.google.com — which is the primary MX. The
+        # previous policy listed only wildcards and would have failed to
+        # authorise the domain's primary exchanger.
+        policy_mx = {
+            line.split(":", 1)[1].strip()
+            for line in policy.splitlines()
+            if line.strip().startswith("mx:")
+        }
+        missing_mx = sorted(h for h in MTA_STS_EXPECTED_MX if h not in policy_mx)
+        if missing_mx:
+            raise SystemExit(
+                f"[netlify] FATAL: {MTA_STS_POLICY_PATH} does not list these MX hosts: "
+                f"{', '.join(missing_mx)}. A wildcard pattern does not cover the apex host."
+            )
+        (d / MTA_STS_POLICY_PATH).write_text(policy, encoding="utf-8")
+        copied.append(MTA_STS_POLICY_PATH)
+    else:
+        raise SystemExit(
+            f"[netlify] FATAL: {MTA_STS_POLICY_PATH} is missing from assets/site/. "
+            "The DNS record _mta-sts.goodciso.org publishes mode: enforce, so the "
+            "policy must be served."
+        )
     write_site("corporate", "goodciso", extra)
     print(f"[netlify] corporate: {len(CORPORATE_REDIRECTS)} redirects, preserved {copied or 'none'}")
 
