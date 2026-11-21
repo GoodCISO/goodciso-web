@@ -52,24 +52,29 @@ appears". A row marked **missing** is work not yet done.
 | GitHub org avatar | `github.com/GoodCISO` | shipped — teal shield with amber dot |
 | Email signature | — | **no mark** — see below |
 | Sales deck | `GoodCISO-AWARE-Deck.pptx` (old repo) | **no mark** — see below |
+| X / Twitter banner | `x.com/goodciso` | **no mark** — see below |
+| YouTube channel avatar | `youtube.com/@goodciso` | **no mark** — see below |
 
 #### The off-repo surfaces, in detail
 
 These surfaces live outside this repository, so CI cannot guard them and
 they drift. All of them were audited on 2026-11-20 by reading the pixels
-that are actually served, not by reading a filename. The two that carried
-the wrong thing were corrected; the generator that produces the assets is
-`make_offsite_assets.py`, which builds them from the same committed
-sources the website uses, so an off-repo surface cannot drift from the
-mark that ships.
+that are actually served, not by reading a filename, and **re-verified on
+2026-11-21** the same way — the Live Audit note below records what that
+second pass changed. The two that carried the wrong thing were corrected;
+the generator that produces the assets is `make_offsite_assets.py`, which
+builds them from the same committed sources the website uses, so an
+off-repo surface cannot drift from the mark that ships.
 
 | Surface | Where it lives | What it carried | Now |
 |---|---|---|---|
 | LinkedIn company avatar | `linkedin.com/company/goodciso` → Company Page Admin | An **unsaturated photo** — a greyscale image, max channel spread = 0 — uploaded 2024-09-19. Not a brand mark at all. | The corporate mark on the navy tile. Verified live on LinkedIn's CDN (`goodciso_logo`): teal shield, G-counter, amber dot; **0** AWARE-green pixels. |
 | LinkedIn company cover | same | **ChangTech's** asset — a generic sunset stock photo whose CDN filename was literally `changtech_consultants_cover`, uploaded 2020-10-28. A cross-brand error, not a wrong-mark one. | The GoodCISO cover. Verified live on LinkedIn's CDN (`goodciso_cover`): teal shield with the amber dot, the "Good CISO" lockup and the tagline; **0** AWARE-green pixels. |
 | GitHub org avatar | `github.com/GoodCISO` (org, not the `aware` repo) | The corporate mark — teal shield, amber dot, **0** green pixels. | Correct already. Left alone. Note the distinction: the **org** avatar is the company's; the **product** is the repo `GoodCISO/aware` under it. |
-| Email signature | Gmail send-as `alvin@goodciso.org` (`gws-goodciso`) | `signature: ""` — **empty**. The block Alvin sends from is typed into the body. | Nothing to fix: there is no mark to be wrong. The ChangTech lane (`alvin@changtech.net`) is likewise text-only. |
+| Email signature | Gmail send-as `alvin@goodciso.org` (`gws-goodciso`) | `signature: ""` — **empty**. The block Alvin sends from is typed into the body. The alias `alfie@goodciso.org` is likewise empty. | Nothing to fix: there is no mark to be wrong. The ChangTech lane (`alvin@changtech.net`) is likewise text-only. |
 | Sales deck | `~/projects/goodciso-website/GoodCISO-AWARE-Deck.pptx` | **No mark of any kind.** The package has no `ppt/media/` directory at all: zero `<a:blip>`, zero `p:pic`, zero `<a:path>` in any slide. Every slide's palette is `00A896 / 0B1120 / 94A3B8 / FFFFFF` — teal, no green. The wordmark is live text reading "AWARE", which is correct for an AWARE pitch deck. | Nothing to fix. Not a wrong-mark defect but a missing-mark one, and the deck is a binary asset that must not be re-authored. |
+| X / Twitter banner | `x.com/goodciso` → Profile → Edit profile | A **pixel-art illustration** — a teal-and-purple blocky scene with a "Good CISO" wordmark in the lower left. Not a mark in any recognised sense: no shield, no G-counter, no amber dot. | Nothing to fix: no corporate mark is present to be wrong. Note the palette contains teal (the corporate hue) but no shield and no amber dot, so it does not read as either brand's mark. |
+| YouTube channel avatar | `youtube.com/@goodciso` | A **purple** disc (`#512DA7`) with a white rounded-square glyph. No shield, no teal, no amber. The channel's one video ("Sentinel Flow", 7 months old) has a product-screenshot thumbnail — no brand mark either. | Nothing to fix. This is a third-brand look (purple) rather than a cross-brand one: neither GoodCISO's nor AWARE's mark appears. |
 
 **The predicted defect was not the one that was there.** The hypothesis was
 that these surfaces carried AWARE's green shield-and-check. **None of them
@@ -82,19 +87,42 @@ corporate surface must never carry the product's mark *or another
 company's asset*. The guard in `qa.py` cannot see a LinkedIn page, which
 is why the two LinkedIn surfaces needed fixing by hand rather than by CI.
 
+#### Live Audit — 2026-11-21
+
+A second, independent pass over every surface in this section, reading the
+bytes that are served **today** rather than trusting the 2026-11-20 record.
+It found no new cross-brand defect, and it corrected three things the first
+pass had wrong:
+
+| Correction | The first pass said | The pixels say |
+|---|---|---|
+| LinkedIn avatar and cover | Fixed, verified live | **Confirmed.** Both re-fetched from LinkedIn's CDN today (`goodciso_logo`, `goodciso_cover`): teal shield, amber dot, **0** AWARE-green pixels. |
+| LinkedIn carousel | "A teal **G logomark**" | A **wordmark** — white "GOOD CISO." in caps with a **teal** period dot. No shield, no G-counter, and the dot is teal where the canonical mark's dot is amber. |
+| Sent mail | "The only images in 40 sent messages are third-party logos" | The **count** was wrong in a way that flattered the result: the bodies are base64-encoded, so a scan that reads the raw JSON sees zero images and reports a false clean. Decoded properly, 40 messages carry **22 `<img>` tags**. Every one was fetched and analysed: a RELX/LexisNexis/Elsevier strip, a 1×1 tracker, and a monochrome far.ai avatar. Still no brand mark — but the earlier clean was luck, not evidence. |
+
+Two surfaces were **not on the record at all** and were added by this pass:
+the X/Twitter **banner** and the YouTube **channel avatar**. Both carry no
+corporate mark (see the table above), so neither is a defect — but a
+surface that is not written down is a surface that cannot be checked.
+
+**The method matters more than the result.** Every verdict in this section
+comes from decoded pixels, not from filenames, CDN paths or a URL that
+looks right. Two of the three corrections above were only findable because
+the pixels were decoded.
+
 #### Surfaces checked and found to carry nothing to fix
 
-Also audited on 2026-11-20, and left unchanged because they carry no mark,
-or already carry the right one:
+Also audited on 2026-11-20 and re-checked on 2026-11-21, and left
+unchanged because they carry no mark, or already carry the right one:
 
 | Surface | What it carries |
 |---|---|
 | LinkedIn post backgrounds (`galapagos-inFeedBackgroundImage`) | Photographs and illustrations. No mark. |
-| LinkedIn carousel (`visuals/carousel-2026-08-11/*.png`, 7 files, old repo) | A **teal** G logomark and the wordmark in caps with a **teal** period dot. No green — the mark is corporate. It is not the canonical lockup (§1: "Good" bold + "CISO" caps, no dot; the amber dot belongs to the shield), and it is a published LinkedIn post, so the PNG is not the live artefact. Canonicalisation is tracked separately; it is not a cross-brand defect. |
+| LinkedIn carousel (`visuals/carousel-2026-08-11/*.png`, 7 files, old repo) | A **teal** period dot after a white "GOOD CISO." wordmark in caps. **No shield glyph and no G-counter** — the mark is a wordmark lockup, not the logomark, and the dot is teal where the canonical mark's dot is amber. No green — the mark is corporate. It is not the canonical lockup (§1: "Good" bold + "CISO" caps, no dot; the amber dot belongs to the shield), and it is a published LinkedIn post, so the PNG is not the live artefact. Canonicalisation is tracked separately; it is not a cross-brand defect. |
 | Old repo `favicon.svg` | A simplified teal shield on navy — no amber dot, no G counter. The superseded repo is not deployed. |
-| X / Twitter `@goodciso` avatar | A small monochrome glyph. No brand colour, no shield. |
+| X / Twitter `@goodciso` avatar | A small monochrome glyph. No brand colour, no shield. (The **banner** on the same account is a pixel-art illustration — see the off-repo table above.) |
 | Google Site "GoodCISO" (Drive) | An unused Google Sites template. No GoodCISO logo. |
-| Sent mail from `alvin@goodciso.org` | No GoodCISO mark. The only images in 40 sent messages are third-party logos (a RELX/LexisNexis/Elsevier strip on a job application) and a `far.ai` hosted image — not brand marks. |
+| Sent mail from `alvin@goodciso.org` | No GoodCISO mark. 40 sent messages were decoded and every image in every body was fetched and analysed: the only images are a **RELX/LexisNexis/Elsevier** strip (a third-party logo, from job-application mail), a 1×1 tracking pixel, and a small monochrome far.ai avatar. No teal shield, no amber dot, no AWARE green. |
 | `npm @goodciso/aware`, PyPI | No logo asset published. |
 
 ### AWARE (aware.goodciso.org, docs…, demo…)
