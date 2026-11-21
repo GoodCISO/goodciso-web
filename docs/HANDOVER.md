@@ -426,7 +426,9 @@ GoodCISO and AWARE are **distinct brands**, and their assets are kept apart deli
 | Favicon | `assets/brand/favicon-goodciso.png` (+ `.ico`, `apple-touch-icon.png`) | `assets/brand/favicon-aware.svg` |
 | Lives on | goodciso.org | aware.goodciso.org, docs.aware.goodciso.org, demo.aware.goodciso.org |
 
-The GoodCISO mark and palette are the **established** ones — they exist in `~/projects/goodciso-logo` and in the previous live site's `favicon.svg`. They were restored, not redesigned.
+The GoodCISO mark and palette are the **established** ones — they exist in `~/projects/good-ciso-logo`. They were restored, not redesigned.
+
+One precision matters: the mark now shipped is the **original artwork**, cut from that source, and it is **not** a byte-restoration of the favicon that was live in the tab before November 2026. That favicon was a simplified teal shield with a **teal** dot and **no G counter**; the mark now on the site is the full logomark — teal shield, G counter, **amber** dot — on a navy tile. Read `docs/BRAND.md` §3 for the full history, including the six-month window in which the corporate *header* carried AWARE's mark.
 
 **`docs/BRAND.md` is the brand decision record** — it records what the two
 marks are, the full list of surfaces each one appears on, why they are kept

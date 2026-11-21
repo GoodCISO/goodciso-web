@@ -16,6 +16,7 @@ Run it after changing anything in qa.py's brand guard:
 """
 from __future__ import annotations
 
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -139,6 +140,88 @@ def main() -> int:
                   "the guard reported nothing")
             failures.append("aware social card")
         shutil.copy(backup / "aware/og.png", AWARE / "og.png")
+
+        # 10. The corporate HEADER carrying AWARE's mark — the defect that
+        #     ran from 2026-05-19 to 2026-11-16 and that nothing caught,
+        #     because the favicon stayed correct the whole time.
+        #
+        #     The shape matters: the June 2026 header was a TEAL rounded
+        #     square with a white check. Teal is the corporate hue, so a
+        #     colour-based guard would have passed it. The guard keys on
+        #     the shield's geometry.
+        corp_index = CORP / "index.html"
+        corp_html = corp_index.read_text()
+        aware_svg = (
+            '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+            '<path d="M12 2.5 4 6v6.2c0 4.7 3.4 9.1 8 9.3 4.6-.2 8-4.6 8-9.3V6l-8-3.5Z"'
+            ' stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'
+            '<path d="M8.5 12.2l2.6 2.6 4.7-5.2" stroke="var(--gc-accent)" stroke-width="1.8"'
+            ' stroke-linecap="round" stroke-linejoin="round"/>'
+            "</svg>"
+        )
+        corp_index.write_text(
+            corp_html.replace(
+                '<img class="gc-logo-mark" src="/assets/goodciso-shield.png" '
+                'width="26" height="30" alt="" decoding="async">',
+                aware_svg,
+            )
+        )
+        corporate_fails("corporate header carries AWARE's shield")
+        corp_index.write_text(corp_html)
+
+        # 11. The corporate header wordmark reading "AWARE". A guard that
+        #     only checked the glyph would pass this.
+        corp_index.write_text(
+            corp_html.replace(
+                '<span class="gc-wordmark"><span class="gc-wordmark-good">Good</span> CISO</span>',
+                "AWARE",
+            )
+        )
+        corporate_fails("corporate header wordmark reads AWARE")
+        corp_index.write_text(corp_html)
+
+        # 12. The corporate header with no mark at all, while the FOOTER
+        #     keeps a correct one. This is the case that proves the check
+        #     reads the header and not the whole page: a page-scoped check
+        #     would find the footer's logo and report nothing.
+        header_only = re.sub(
+            r"<header\b.*?</header>",
+            lambda m: re.sub(
+                r"<a\b[^>]*class=\"[^\"]*\bgc-logo\b[^\"]*\"[^>]*>.*?</a>",
+                "",
+                m.group(0),
+                count=1,
+                flags=re.S,
+            ),
+            corp_html,
+            count=1,
+            flags=re.S,
+        )
+        assert header_only != corp_html, "header logo removal did not apply"
+        corp_index.write_text(header_only)
+        corporate_fails("corporate header has no mark (footer still has one)")
+        corp_index.write_text(corp_html)
+
+        # 13. The AWARE site carrying the corporate shield in its header.
+        aware_index = AWARE / "index.html"
+        aware_html = aware_index.read_text()
+        aware_index.write_text(
+            aware_html.replace(
+                '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">',
+                '<img class="gc-logo-mark" src="/assets/goodciso-shield.png" '
+                'width="26" height="30" alt="" decoding="async">'
+                '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">',
+            )
+        )
+        aware_errors = qa.check_brand("aware")
+        if aware_errors:
+            print("  PASS  AWARE header carries the corporate shield")
+            print(f"          -> {aware_errors[0]}")
+        else:
+            print("  FAIL  AWARE header carries the corporate shield: "
+                  "the guard reported nothing")
+            failures.append("aware header shield")
+        aware_index.write_text(aware_html)
     finally:
         shutil.rmtree(DIST, ignore_errors=True)
         shutil.copytree(backup, DIST)

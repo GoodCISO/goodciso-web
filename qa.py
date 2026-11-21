@@ -18,6 +18,39 @@ DIST = Path(__file__).parent.resolve() / "dist"
 # pass by renaming the file.
 BRAND_DIR = Path(__file__).parent.resolve() / "assets/brand"
 
+# The geometry of AWARE's shield-and-checkmark, as it is written in the
+# inline <svg> the AWARE header renders (build.py AWARE_LOGO).
+#
+# It is a signature rather than a colour, on purpose. The June 2026 defect
+# put a TEAL rounded square with a white check in the corporate header —
+# teal is the corporate hue, so a colour test would have passed it. The
+# shape is what actually distinguishes the two marks, so the shape is what
+# the guard looks for.
+AWARE_SHIELD_SIGNATURE = "M12 2.5 4 6v6.2"
+
+
+def _header_logo_anchor(html: str) -> str | None:
+    """The header's logo anchor, or None if the header has no logo.
+
+    Scoped to the <header> element, then to the anchor carrying class
+    "gc-logo" inside it. Both scopings are load-bearing:
+
+    - Scoping to <header> matters because the footer repeats the logo. A
+      check that searched the whole page would let a correct footer satisfy
+      a wrong header — and a header with no mark at all would pass, because
+      the footer's mark was still there.
+    - Scoping to the anchor matters so that body copy cannot satisfy the
+      check.
+    """
+    hm = re.search(r"<header\b.*?</header>", html, re.S)
+    if not hm:
+        return None
+    m = re.search(
+        r"<a\b[^>]*class=\"[^\"]*\bgc-logo\b[^\"]*\"[^>]*>.*?</a>", hm.group(0), re.S
+    )
+    return m.group(0) if m else None
+
+
 SITE_ROOTS = {
     "aware": "https://aware.goodciso.org",
     "corporate": "https://goodciso.org",
@@ -305,6 +338,74 @@ def check_brand(site: str) -> list[str]:
                 errors.append(
                     f"{site}: /og.png is not the AWARE social card — "
                     "an AWARE link must not carry the corporate mark"
+                )
+
+    # 5. The HEADER mark must belong to THIS brand.
+    #
+    # This check exists because of a defect the other four did not catch.
+    # From 2026-05-19 the corporate header on goodciso.org carried AWARE's
+    # teal square-and-check with the wordmark reading "AWARE" — for about
+    # six months. The favicon stayed correct throughout, so nothing that
+    # checked the favicon would ever have seen it. The header mark is a
+    # brand surface like any other, and it was the one nobody checked.
+    #
+    # It is checked on every built page, because the header is rendered per
+    # page: one page with the wrong mark is a visible defect even if every
+    # other page is right.
+    #
+    # Both halves of the header are checked, because the June 2026 defect
+    # changed both and a guard that only checks the glyph would miss a
+    # header that showed the right shield under the wrong wordmark:
+    #
+    #   - the GLYPH: the corporate header is an <img> pointing at the
+    #     committed GoodCISO artwork; the AWARE header is an inline <svg>.
+    #     Each is checked for the OTHER brand's signature.
+    #   - the WORDMARK: "Good CISO" on the corporate site, "AWARE" on the
+    #     product sites.
+    #
+    # The checks read the header anchor, not the whole page, so a mention
+    # of the word "AWARE" in body copy cannot trip them and a wordmark that
+    # appears in the footer cannot satisfy them.
+    for page in page_files(site):
+        html = page.read_text(errors="replace")
+        rel = page.relative_to(root)
+        anchor = _header_logo_anchor(html)
+        if anchor is None:
+            errors.append(
+                f"{site}: {rel} has no header logo — the header must carry "
+                "this brand's own mark"
+            )
+            continue
+        if site == "corporate":
+            if "goodciso-shield.png" not in anchor:
+                errors.append(
+                    f"corporate: {rel} — the header mark is not the GoodCISO "
+                    "shield. The corporate header must carry GoodCISO's own "
+                    "artwork, never AWARE's."
+                )
+            if AWARE_SHIELD_SIGNATURE in anchor:
+                errors.append(
+                    f"corporate: {rel} — the header carries AWARE's shield "
+                    "mark. The corporate header must carry GoodCISO's own "
+                    "artwork, never the product's."
+                )
+            if "gc-wordmark-good" not in anchor:
+                errors.append(
+                    f"corporate: {rel} — the header wordmark is not "
+                    '"Good CISO". The corporate wordmark is "Good" in the '
+                    "heavier weight plus CISO in caps."
+                )
+        else:
+            if "goodciso-shield" in anchor:
+                errors.append(
+                    f"{site}: {rel} — the header carries GoodCISO's shield. "
+                    "The product sites must carry AWARE's own mark, never the "
+                    "company's."
+                )
+            if "gc-wordmark-good" in anchor:
+                errors.append(
+                    f"{site}: {rel} — the header wordmark is the corporate "
+                    '"Good CISO" wordmark. The product sites carry "AWARE".'
                 )
 
     return errors

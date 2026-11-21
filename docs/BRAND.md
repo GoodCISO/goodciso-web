@@ -29,6 +29,12 @@ mark is *cut* from those pixels (`extract_logo.py`), never redrawn. Its
 palette — teal `#00a896`, navy `#030712`, amber `#F5A623` — is recorded in
 that project's `README.md`.
 
+The old repo's `favicon.svg` was a **simplified** version of this mark — a
+solid teal shield with a teal centre dot and no G counter. It is evidence
+that the teal-and-navy palette was GoodCISO's; it is **not** the artwork.
+The distinction matters because the mark shipped today carries the G counter
+and the **amber** dot, which the old favicon never had. See §3.
+
 ---
 
 ## 2. Where each mark appears
@@ -160,6 +166,111 @@ own mark and was correct. It was retired by accident, not by decision.
 
 Alvin was not notified, and should have been. See §6.
 
+### The correction that changes the answer — 2026-11-21
+
+The paragraph above is right about the **defect** and wrong about the
+**history**. It says the teal shield-and-dot was "GoodCISO's own mark on the
+site for months" and was "retired by accident". Read against the old repo's
+actual git history, that is only true for part of the window, and the
+distinction changes what the restore means.
+
+**The teal shield-and-dot favicon was live for ~6 months, not "for months
+of identity".** It was committed at `8d5f04b` (2026-05-20) and last
+published from the `main` branch. A different favicon — the AWARE teal
+rounded-square-with-white-check — was committed at `d29380f` (2026-06-29),
+but that commit is **not an ancestor of `main`**: it lives only on
+`feat/aws-monitor-calculator`. `git merge-base --is-ancestor d29380f main`
+returns false. So the AWARE favicon was **never published from `main`** and
+never reached production via that commit.
+
+**The corporate *header* carried AWARE's mark for six months, and it is
+still the reason this card exists.** Since `00ce804` (2026-05-19, "AWARE
+website rebuild"), the old site's header has been a teal rounded square
+with a white check and the wordmark "AWARE" — AWARE's mark, on the
+corporate domain. `00ce804` changed only the wordmark text from "Good CISO"
+to "AWARE"; the glyph was already the AWARE square. That is the error the
+2026-11-16 build **inherited**, and §"The old repo" above describes it.
+
+So there were **two** defects, not one, and they are different in kind:
+
+| | Defect | Window | Fixed |
+|---|---|---|---|
+| A | The **favicon** carried AWARE's green shield-and-check on goodciso.org | 2026-11-16 21:37 → 2026-11-18 12:40 (~39 h) | `0aa78e3` / `a7bf229` |
+| B | The **header** carried AWARE's teal square-and-check, with the wordmark reading "AWARE", on goodciso.org | 2026-05-19 → 2026-11-16 (~6 months) | `a7bf229` (2026-11-18) |
+
+Defect A is the one Alvin saw: a green tick where a teal shield had been.
+Defect B is older and quieter — for six months the *page* said AWARE in
+the corner of every screen, and nobody noticed because the favicon was
+still the teal shield.
+
+**What this means for the current mark.** The teal shield-with-G-and-amber-dot
+now on goodciso.org is **not** a byte-restoration of what was live in
+November 2026. It is the original artwork from `~/projects/good-ciso-logo`
+— verified below — but the mark that was live in the tab was a *simplified*
+teal shield with a **teal** centre dot and **no G counter** (the old
+`favicon.svg`: a solid teal shield with a navy inner cut-out and a teal
+dot). The current favicon is the **full** logo artwork: teal shield, G-shaped
+counter, amber dot, on a navy tile.
+
+That is a deliberate improvement, and it is defensible — the original
+artwork is the trademark, the simplified favicon was a hand-made
+approximation of it, and the approximation is the one that had no G counter
+and no amber. But it is a **change to the corporate mark**, and §6 requires
+that a change to the corporate brand notifies the operator. The 2026-11-20
+notification (`/tmp/brand-notify.txt`, sent via `hermes send`, confirmed
+delivered) says the mark is "restored" and "your original pixels, cut from
+the source artwork" — it does **not** say that the tab mark's *shape*
+differs from the November favicon (no G counter before, G counter now),
+and it does not mention the six-month header defect at all.
+
+**The correction to make.** The accurate statement is:
+
+> GoodCISO's corporate mark was **restored from the original artwork**, not
+> restored byte-for-byte from the previous favicon. The previous favicon was
+> a simplified teal shield with a teal dot and no G counter; the mark now
+> shipped is the full original logomark — teal shield, G counter, amber dot
+> — on a navy tile. The mark that was live in the tab for the previous six
+> months was a simplification; the mark on the site now is the trademark.
+
+That sentence should be in the notification to the operator, because
+"restored" and "changed" are different business events and only one of them
+is what actually happened.
+
+#### The verification behind the "original artwork" claim
+
+"Restored from the original artwork" is a claim about pixels, so it was
+checked against pixels rather than asserted.
+
+The source is `~/projects/good-ciso-logo/good-ciso-logo.png` — a 1024×1024
+file that is a JPEG despite the `.png` extension. `extract_logo.py` cuts the
+shield from it and the cut is reproducible. Re-running that cut in memory
+and comparing the result to the committed `assets/brand/goodciso-shield.png`:
+
+| Measure | Result |
+|---|---|
+| Size | 64×73, both |
+| Alpha mask | **pixel-identical**, 0 differing pixels |
+| Shape IoU | **1.0000** |
+| Mean abs RGB difference on opaque pixels | **0.0, 0.0, 0.0** |
+| Amber dot centroid | (31.82, 34.00) in both, 66 px each |
+
+So the shipped shield is the original artwork, cut — not a redraw and not
+a vector trace. That is the claim `trace_logo.py` exists to disprove: the
+three SVG traces in `references/goodciso-logo-restoration.md` scored 0.33,
+0.44 and 0.41 IoU, and none of them is in the build.
+
+The live corporate favicon was checked the same way — pixels, not filename:
+
+| Surface (live, fetched 2026-11-21) | Teal px | Amber px | AWARE green px |
+|---|---|---|---|
+| `goodciso.org/favicon.png` (512×512) | 52,575 | 1,674 | **0** |
+| `goodciso.org/og.png` (1200×630) | 2,147 | 68 | **0** |
+| `aware.goodciso.org/og.png` (1200×630) | 0 | 0 | **1,798** |
+
+Each live asset is byte-identical (SHA-256) to its committed counterpart in
+`assets/brand/`. The corporate header shield renders teal + amber with 0
+green pixels, confirmed by reading the pixels of the served image.
+
 ---
 
 ## 4. Rules
@@ -209,7 +320,19 @@ the source, and fails the deploy on any of:
 - an AWARE site's `/favicon.svg` is missing or is not the AWARE mark;
 - the corporate `/og.png` is missing or is not the GoodCISO social card;
 - an AWARE site's `/og.png` is missing or is not the AWARE social card;
-- a page carries no `og:image`, or one that is off-site or not in the build.
+- a page carries no `og:image`, or one that is off-site or not in the build;
+- **the header mark is the wrong brand's**, on any page, on any site. The
+  corporate header must reference the GoodCISO shield artwork and carry the
+  "Good CISO" wordmark; the AWARE headers must carry neither. The check
+  reads the `<header>` element specifically, because the footer repeats the
+  logo — a page-scoped check would let a correct footer satisfy a wrong
+  header, and would pass a header with no mark at all.
+
+The header check keys on the **shape** of AWARE's shield, not its colour.
+The June 2026 defect put a *teal* rounded square with a white check in the
+corporate header; teal is the corporate hue, so a colour-based guard would
+have passed it. The shape is what distinguishes the two marks, so the shape
+is what the guard looks for.
 
 The accent check resolves the cascade rather than grepping for a hex
 string, because `tokens.css` is the shared base layer and legitimately
@@ -221,6 +344,14 @@ brands apart.
 `test_brand_guard.py` proves the guard can fail. It breaks each condition
 in turn and asserts the guard fires — a check that cannot fail is not a
 check.
+
+**Thirteen conditions** are covered: the corporate favicon (wrong brand and
+missing), the corporate accent (repointed at AWARE's green), the hero glow
+(hard-coded green, and hard-coded to anything rather than derived), the AWARE
+favicon (wrong brand), the social card on both brands (wrong brand and
+missing), and the **header mark** — AWARE's shield in the corporate header,
+"AWARE" as the corporate wordmark, a corporate header with no mark while the
+footer still has one, and GoodCISO's shield in an AWARE header.
 
 ```bash
 python3.12 build_all.py && python3.12 qa.py && python3.12 test_brand_guard.py
