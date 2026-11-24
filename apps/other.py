@@ -13,6 +13,7 @@ C_NAV = [
     Nav("AWARE", "/aware"),
     Nav("Insights", "/insights"),
     Nav("About", "/about"),
+    Nav("Pricing", "/pricing"),
     Nav("Contact", "/contact"),
 ]
 
@@ -32,6 +33,7 @@ C_FOOTER = [
     ("Company", [
         Nav("About", "/about"),
         Nav("Insights", "/insights"),
+        Nav("Pricing", "/pricing"),
         Nav("Contact", "/contact"),
         Nav("Privacy", "/privacy"),
         Nav("Terms", "/terms"),
@@ -393,6 +395,186 @@ CORPORATE = [
       We do not list certifications, partnerships, customer counts or team biographies we cannot evidence. If that makes this page look thinner than others, it is the intended effect.
     </div>
   </div>
+</div></section>
+""",
+    ),
+    _c(
+        "pricing",
+        "Pricing",
+        "AWARE platform tiers and retained security leadership. Priced on outcomes: what is produced, what changes, and what is externally verifiable.",
+        """
+<section class="gc-hero gc-hero-sm"><div class="gc-container">
+  <span class="gc-eyebrow">Pricing</span>
+  <h1>Priced on outcomes, not on hours</h1>
+  <p class="gc-hero-sub">Two things are sold here. AWARE is a software platform, on a subscription, and the tiers below are its licence tiers. Retained leadership is senior security cover for a business that needs a person accountable. Each is priced on what it produces.</p>
+</div></section>
+
+<section class="gc-section"><div class="gc-container">
+  <span class="gc-eyebrow">AWARE platform</span>
+  <h2>The platform, on a subscription</h2>
+  <p class="gc-muted gc-measure">AWARE is open source. You can run it yourself today at no cost, and the tiers below are what we charge to run it for you and prove what it did. Paying for the platform buys operations and evidence, not access to the engine.</p>
+  <div class="gc-grid gc-grid-4 gc-mt-8">
+    <div class="gc-card">
+      <h3>Open Source</h3>
+      <p style="font-size:var(--gc-text-3xl);font-weight:700;color:var(--gc-text);margin:var(--gc-space-3) 0 var(--gc-space-1)">Free</p>
+      <p class="gc-muted" style="font-size:var(--gc-text-sm);margin-bottom:var(--gc-space-4)">Apache-2.0, self-hosted</p>
+      <ul class="gc-list gc-muted" style="font-size:var(--gc-text-sm)">
+        <li>The engine itself, with no feature gates</li>
+        <li>Community support</li>
+        <li>Source on GitHub</li>
+      </ul>
+      <a class="gc-btn gc-btn-secondary gc-btn-block" href="https://github.com/GoodCISO/aware" target="_blank" rel="noopener noreferrer">Get the source</a>
+    </div>
+    <div class="gc-card">
+      <h3>Scan</h3>
+      <p style="font-size:var(--gc-text-3xl);font-weight:700;color:var(--gc-text);margin:var(--gc-space-3) 0 var(--gc-space-1)">£2,000<span style="font-size:var(--gc-text-sm);font-weight:400;color:var(--gc-text-muted)">/mo</span></p>
+      <p class="gc-muted" style="font-size:var(--gc-text-sm);margin-bottom:var(--gc-space-4)">or £20,000/year</p>
+      <ul class="gc-list gc-muted" style="font-size:var(--gc-text-sm)">
+        <li>FCA compliance scanning (COBS, SYSC, PRIN, DISP)</li>
+        <li>1,000 entries per month scanned</li>
+        <li>Scheduled scan runs and alerts</li>
+        <li>Email support</li>
+      </ul>
+      <a class="gc-btn gc-btn-secondary gc-btn-block" href="/contact">Start a conversation</a>
+    </div>
+    <div class="gc-card">
+      <h3>Pro</h3>
+      <p style="font-size:var(--gc-text-3xl);font-weight:700;color:var(--gc-text);margin:var(--gc-space-3) 0 var(--gc-space-1)">£5,000<span style="font-size:var(--gc-text-sm);font-weight:400;color:var(--gc-text-muted)">/mo</span></p>
+      <p class="gc-muted" style="font-size:var(--gc-text-sm);margin-bottom:var(--gc-space-4)">or £50,000/year</p>
+      <ul class="gc-list gc-muted" style="font-size:var(--gc-text-sm)">
+        <li>The same engine, run for you</li>
+        <li>Continuous monitoring and alerting</li>
+        <li>Evidence packs an auditor can read</li>
+        <li>Priority support, 4-hour SLA</li>
+      </ul>
+      <a class="gc-btn gc-btn-secondary gc-btn-block" href="/contact">Start a conversation</a>
+    </div>
+    <div class="gc-card">
+      <h3>Enterprise</h3>
+      <p style="font-size:var(--gc-text-3xl);font-weight:700;color:var(--gc-text);margin:var(--gc-space-3) 0 var(--gc-space-1)">Custom</p>
+      <p class="gc-muted" style="font-size:var(--gc-text-sm);margin-bottom:var(--gc-space-4)">scoped to the estate</p>
+      <ul class="gc-list gc-muted" style="font-size:var(--gc-text-sm)">
+        <li>Everything in Pro</li>
+        <li>Deployment and integration</li>
+        <li>Custom policy and control packs</li>
+        <li>1-hour emergency response SLA</li>
+      </ul>
+      <a class="gc-btn gc-btn-secondary gc-btn-block" href="/contact">Talk to us</a>
+    </div>
+  </div>
+  <div class="gc-callout gc-mt-8">
+    <strong>What the platform tiers do not include</strong>
+    Sign receipts an auditor can verify independently, or produce scheduled evidence packs. That is what Pro adds, and it is operations, not engine features.
+  </div>
+</div></section>
+
+<section class="gc-section gc-section-tight"><div class="gc-container">
+  <span class="gc-eyebrow">Retained leadership</span>
+  <h2>Senior security cover, on a retainer</h2>
+  <p class="gc-muted gc-measure">A separate thing from the platform. These are for a business that needs a named senior security leader accountable to the board. Priced on what is produced, and stated in terms of what you get rather than how many hours you get.</p>
+  <div class="gc-grid gc-grid-3 gc-mt-8">
+    <div class="gc-card">
+      <h3>Advisory</h3>
+      <p style="font-size:var(--gc-text-3xl);font-weight:700;color:var(--gc-text);margin:var(--gc-space-3) 0 var(--gc-space-1)">£2,500<span style="font-size:var(--gc-text-sm);font-weight:400;color:var(--gc-text-muted)">/mo</span></p>
+      <p class="gc-muted" style="font-size:var(--gc-text-sm);margin-bottom:var(--gc-space-4)">Senior guidance. You keep the decisions.</p>
+      <ul class="gc-list gc-muted" style="font-size:var(--gc-text-sm)">
+        <li>A monthly board-ready risk report</li>
+        <li>A same-week response when a customer sends a security questionnaire</li>
+        <li>Policy and control design, written for your business</li>
+        <li>Risk register kept current, and owned by you</li>
+      </ul>
+      <div class="gc-callout gc-mt-8" style="font-size:var(--gc-text-sm)">
+        <strong>Outcome credit</strong>
+        £500 per month credited each quarter when the agreed outcome is met &mdash; Cyber Essentials Plus issued, or a passed customer or vendor security questionnaire. Confirmed each quarter against the agreed outcome.
+      </div>
+      <a class="gc-btn gc-btn-secondary gc-btn-block gc-mt-8" href="/contact">Start a conversation</a>
+    </div>
+    <div class="gc-card">
+      <h3>Managed</h3>
+      <p style="font-size:var(--gc-text-3xl);font-weight:700;color:var(--gc-text);margin:var(--gc-space-3) 0 var(--gc-space-1)">£7,500<span style="font-size:var(--gc-text-sm);font-weight:400;color:var(--gc-text-muted)">/mo</span></p>
+      <p class="gc-muted" style="font-size:var(--gc-text-sm);margin-bottom:var(--gc-space-4)">We own the execution as well as the advice.</p>
+      <ul class="gc-list gc-muted" style="font-size:var(--gc-text-sm)">
+        <li>Everything in Advisory, plus we do the work</li>
+        <li>Monthly security reviews, and the actions closed out</li>
+        <li>Board reporting and material risk, produced not requested</li>
+        <li>Unlimited regulatory frameworks</li>
+        <li>ISO 27001 and SOC 2 support</li>
+        <li>Incident response retainer with a named contact</li>
+      </ul>
+      <a class="gc-btn gc-btn-primary gc-btn-block gc-mt-8" href="/contact">Start a conversation</a>
+    </div>
+    <div class="gc-card">
+      <h3>Embedded</h3>
+      <p style="font-size:var(--gc-text-3xl);font-weight:700;color:var(--gc-text);margin:var(--gc-space-3) 0 var(--gc-space-1)">£12,500<span style="font-size:var(--gc-text-sm);font-weight:400;color:var(--gc-text-muted)">/mo</span></p>
+      <p class="gc-muted" style="font-size:var(--gc-text-sm);margin-bottom:var(--gc-space-4)">We hold the levers, end to end.</p>
+      <ul class="gc-list gc-muted" style="font-size:var(--gc-text-sm)">
+        <li>Everything in Managed, with the programme owned end to end</li>
+        <li>Continuous risk monitoring across your estate</li>
+        <li>Control operation and evidence production, continuously</li>
+        <li>Board and regulator liaison, including the hard conversations</li>
+        <li>Priority response (24h) and incident response leadership</li>
+      </ul>
+      <a class="gc-btn gc-btn-secondary gc-btn-block gc-mt-8" href="/contact">Talk to us</a>
+    </div>
+  </div>
+</div></section>
+
+<section class="gc-section gc-section-tight"><div class="gc-container">
+  <span class="gc-eyebrow">Outcome package</span>
+  <h2>Certified</h2>
+  <p class="gc-muted gc-measure">A fixed fee for the work, and a second tranche released only when the certificate is issued. We do not guarantee the certification. The accredited certification body audits you and makes that decision, on their own criteria and their own schedule.</p>
+  <div class="gc-grid gc-grid-2 gc-mt-8">
+    <div class="gc-card">
+      <p class="gc-eyebrow">Base fee</p>
+      <p style="font-size:var(--gc-text-4xl);font-weight:700;color:var(--gc-text)">£7,500</p>
+      <p class="gc-muted" style="font-size:var(--gc-text-sm)">Fixed fee, fixed scope. Preparation, evidence and audit management, agreed in writing before we start.</p>
+      <p class="gc-eyebrow gc-mt-8">Outcome tranche</p>
+      <p style="font-size:var(--gc-text-4xl);font-weight:700;color:var(--gc-accent-text)">+£2,500</p>
+      <p class="gc-muted" style="font-size:var(--gc-text-sm)">Released only when the certificate is issued.</p>
+      <p class="gc-eyebrow gc-mt-8">Total</p>
+      <p style="font-size:var(--gc-text-4xl);font-weight:700;color:var(--gc-text)">£10,000</p>
+      <p class="gc-muted" style="font-size:var(--gc-text-sm)">Total, if the certificate is issued.</p>
+    </div>
+    <div class="gc-card">
+      <span class="gc-eyebrow">How it works</span>
+      <ol class="gc-list" style="font-size:var(--gc-text-sm);margin-top:var(--gc-space-2)">
+        <li><strong>We do the work.</strong> Fixed scope, fixed fee, agreed in writing before we start.</li>
+        <li><strong>The certification body decides.</strong> They audit you and issue the certificate. Their decision, their schedule, their fee.</li>
+        <li><strong>The £2,500 releases</strong> when the certificate is issued. It is contingent on the outcome, not on our opinion of it.</li>
+        <li><strong>If we do not do the work as scoped, you do not pay the tranche.</strong> That is the point of splitting it this way.</li>
+      </ol>
+      <div class="gc-callout gc-callout-warn gc-mt-8" style="font-size:var(--gc-text-sm)">
+        <strong>Not included</strong>
+        The certification body's own audit fee. You pay that directly to them. We guarantee the work, not the certification.
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<section class="gc-section gc-section-tight"><div class="gc-container">
+  <span class="gc-eyebrow">Coaching</span>
+  <h2>Coaching, in a fixed block</h2>
+  <p class="gc-muted gc-measure">For an in-house team that has the capability but not the confidence. Three sessions, written feedback and a review call. Booked in blocks of three.</p>
+  <div class="gc-card gc-mt-8" style="max-width:var(--gc-container-narrow)">
+    <h3>Coaching block</h3>
+    <p style="font-size:var(--gc-text-3xl);font-weight:700;color:var(--gc-text);margin:var(--gc-space-3) 0 var(--gc-space-1)">£1,500</p>
+    <p class="gc-muted" style="font-size:var(--gc-text-sm);margin-bottom:var(--gc-space-4)">Per block of three sessions</p>
+    <ul class="gc-list gc-muted" style="font-size:var(--gc-text-sm)">
+      <li>Three sessions with a senior security practitioner</li>
+      <li>Written feedback after each one</li>
+      <li>One review call at the end of the block</li>
+      <li>Architecture review, control design and evidence-pack review</li>
+    </ul>
+    <a class="gc-btn gc-btn-secondary gc-btn-block gc-mt-8" href="/contact">Start a conversation</a>
+  </div>
+</div></section>
+
+<section class="gc-section gc-section-tight"><div class="gc-container">
+  <div class="gc-callout gc-callout-warn">
+    <strong>What is not included in any price</strong>
+    Certification and audit fees, which you pay to the certifying body. Penetration testing, which is a separate engagement with a specialist firm. Legal advice &mdash; we do not give it.
+  </div>
+  <p class="gc-muted" style="font-size:var(--gc-text-sm);margin-top:var(--gc-space-8)">All prices exclude VAT. Retained leadership and coaching carry a minimum three-month commitment. AWARE platform tiers are billed monthly or annually.</p>
 </div></section>
 """,
     ),
