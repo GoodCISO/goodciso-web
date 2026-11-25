@@ -17,6 +17,7 @@ import sys
 sys.path.insert(0, str(ROOT / "apps"))
 from aware.pages import NAV as AWARE_NAV, FOOTER as AWARE_FOOTER, TAGLINE as AWARE_TAGLINE, PAGES as AWARE_PAGES
 from other import C_NAV, C_FOOTER, C_TAGLINE, CORPORATE
+import md_page
 from insights_loader import INSIGHT_PAGES
 from other import D_NAV, D_FOOTER, D_TAGLINE, DOCS
 from other import M_NAV, M_FOOTER, M_TAGLINE, DEMO
@@ -112,6 +113,26 @@ def write_site(site: Site, pages: list[Page], extra_assets: dict[str, str] | Non
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(html, encoding="utf-8")
         written.append(path)
+
+        # The machine-readable rendering of the same page, from the same
+        # source, so the two cannot drift. An answer engine reading this
+        # gets the page's own content in a shape it can cite, rather than
+        # navigation and a script tag.
+        if not page.slug.endswith(".html"):
+            md = md_page.render_with_headings(
+                page.body, page.title, page.description, page.canonical
+            )
+            # The slug may already end in "index" (e.g. "aware/index"), in
+            # which case the page lives at the directory itself rather
+            # than in a subdirectory named for the slug.
+            if page.slug == "index":
+                md_path = out / "index.md"
+            elif page.slug.endswith("/index"):
+                md_path = out / page.slug.rsplit("/", 1)[0] / "index.md"
+            else:
+                md_path = out / page.slug / "index.md"
+            md_path.parent.mkdir(parents=True, exist_ok=True)
+            md_path.write_text(md, encoding="utf-8")
 
     # site.js
     (assets / "site.js").write_text(SITE_JS, encoding="utf-8")
@@ -284,7 +305,7 @@ def main():
             B.render_page(
                 site,
                 Page(
-                    slug="404",
+                    slug="404.html",
                     title="Page not found",
                     description="That page could not be found. Use the navigation above, or the XML sitemap to find the section you were looking for.",
                     body="<section class='gc-hero'><div class='gc-container'><h1>Page not found</h1>"

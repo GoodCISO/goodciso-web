@@ -306,6 +306,25 @@ def render_page(site: Site, page: Page, nav_current: str = "") -> str:
         )
     else:
         icon_links = '<link rel="icon" href="/favicon.svg" type="image/svg+xml">'
+
+    # The machine-readable twin of this page, so the relationship is
+    # declared rather than assumed. An answer engine following this link
+    # gets the page's own content as markdown, rather than navigation and
+    # a script tag.
+    if page.slug == "index":
+        md_href = "/index.md"
+    elif page.slug.endswith("/index"):
+        md_href = f"/{page.slug.rsplit('/', 1)[0]}/index.md"
+    else:
+        md_href = f"/{page.slug}/index.md"
+    md_link = (
+        ""
+        if page.slug.endswith(".html")
+        else (
+            f'<link rel="alternate" type="text/markdown" href="{md_href}" '
+            f'title="Machine-readable version of this page">'
+        )
+    )
     # The browser chrome colour. The corporate site is GoodCISO navy; the
     # AWARE sites are AWARE midnight. A hardcoded value shipped AWARE's
     # midnight on goodciso.org, which put the product's colour in the
@@ -359,6 +378,7 @@ def render_page(site: Site, page: Page, nav_current: str = "") -> str:
 <meta name="twitter:description" content="{esc(page.description)}">
 <meta name="theme-color" content="{theme_color}">
 {icon_links}
+{md_link}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">

@@ -53,4 +53,26 @@ State this plainly rather than letting it be discovered later.
 - [AWARE playground](https://demo.aware.goodciso.org/): seven scenarios running the real decision vocabulary. Every decision is labelled as simulated.
 - [Source](https://github.com/GoodCISO/aware) · [npm](https://www.npmjs.com/package/@goodciso/aware)
 
+## Machine-readable pages
+
+Every page on this site has a markdown rendering of the same content, generated
+from the same source as the HTML so the two cannot drift. Fetch it by appending
+`/index.md` to the page path, with `Content-Type: text/markdown`.
+
+These are the pages most likely to answer a question:
+
+- [Pricing](https://goodciso.org/pricing/index.md): AWARE platform tiers and
+  retained security leadership, priced on outcomes.
+- [Services](https://goodciso.org/services/index.md): the four service lines.
+- [AI security and governance](https://goodciso.org/services/ai-security/index.md).
+- [Security architecture](https://goodciso.org/services/security-architecture/index.md).
+- [Regulatory readiness](https://goodciso.org/services/regulatory-readiness/index.md).
+- [About](https://goodciso.org/about/index.md): the company, and its relationship
+  with AWARE.
+- [AWARE on GoodCISO](https://goodciso.org/aware/index.md).
+
+The same applies to the AWARE sites: `aware.goodciso.org/<page>/index.md`,
+`docs.aware.goodciso.org/<page>/index.md` and
+`demo.aware.goodciso.org/<page>/index.md`.
+
 For deeper agent guidance, see `/agent-instructions.txt`.

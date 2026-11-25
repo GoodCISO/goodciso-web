@@ -150,6 +150,15 @@ BASE_HEADERS = f"""
   [headers.values]
     Cache-Control = "public, max-age=86400"
 
+# The machine-readable rendering of each page. It must be served as
+# markdown, not as a download, or an answer engine cannot read it
+# directly.
+[[headers]]
+  for = "/*.md"
+  [headers.values]
+    Content-Type = "text/markdown; charset=utf-8"
+    Cache-Control = "public, max-age=3600"
+
 [[headers]]
   for = "/robots.txt"
   [headers.values]
