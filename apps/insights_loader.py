@@ -18,11 +18,20 @@ from build import Page, md
 # Links carried over from the legacy posts point at URLs that the new site
 # 301s rather than serves. They are rewritten to their new homes so the
 # articles never link to a redirect.
+# Legacy link targets, mapped to the pages that replaced them.
+#
+# The trailing slash matters: the corporate site serves "/contact/" and
+# "/contact" redirects to it. A canonical link points at the resolved URL,
+# so the values here carry the slash.
 LEGACY_LINK_FIXES = {
-    "/demo": "/aware",
-    "/book.html": "/contact",
-    "/pricing.html": "/services/regulatory-readiness",
-    "/services.html": "/services",
+    # The legacy posts linked to pages of the old site. Each maps to the
+    # page that replaced it, WITH the trailing slash the site serves, so
+    # the link points at the resolved URL rather than at a redirect.
+    "/demo": "/aware/",
+    "/book.html": "/contact/",
+    "/pricing.html": "/pricing/",
+    "/services.html": "/services/",
+    "/contact.html": "/contact/",
 }
 
 
@@ -35,6 +44,47 @@ def article_html(markdown_body: str) -> str:
     # The fragment's remaining wrapper markup (<section>, <div>) would
     # otherwise be rendered as visible text by the markdown pass.
     markdown_body = re.sub(r"</?(?:section|div)[^>]*>", "", markdown_body, flags=re.I)
+
+    # Inline HTML inside the prose. md() escapes markup, so a literal
+    # <strong> or <a href> in the fragment would render as visible source
+    # text - which is exactly what happened to the closing callout in all
+    # four migrated articles: "Talk to us about this" and the link after
+    # it appeared as tags on screen rather than as a bold line and a link.
+    #
+    # Converting them to markdown before rendering lets the same markdown
+    # pass handle them, so bold and links work as the author intended.
+    markdown_body = re.sub(
+        r"<strong[^>]*>(.*?)</strong>",
+        r"**\1**",
+        markdown_body,
+        flags=re.S | re.I,
+    )
+    markdown_body = re.sub(
+        r"<b[^>]*>(.*?)</b>",
+        r"**\1**",
+        markdown_body,
+        flags=re.S | re.I,
+    )
+    markdown_body = re.sub(
+        r"<em[^>]*>(.*?)</em>",
+        r"*\1*",
+        markdown_body,
+        flags=re.S | re.I,
+    )
+    markdown_body = re.sub(
+        r'<a[^>]*href="([^"]*)"[^>]*>(.*?)</a>',
+        r"[\2](\1)",
+        markdown_body,
+        flags=re.S | re.I,
+    )
+
+    # The legacy link targets are corrected AFTER the inline-HTML pass, so
+    # that it catches links written as markdown AND links written as
+    # <a href>. Applying it before left the callout's "/contact" pointing
+    # at a redirect rather than at the resolved URL.
+    for old_path, new_path in LEGACY_LINK_FIXES.items():
+        markdown_body = markdown_body.replace(f"]({old_path})", f"]({new_path})")
+        markdown_body = markdown_body.replace(f"({old_path})", f"({new_path})")
     out = []
     in_list = False
     in_code = False

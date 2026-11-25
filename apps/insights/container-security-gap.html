@@ -35,7 +35,7 @@ The industry solution is service accounts. Kubernetes service accounts, IAM role
 
 The deeper issue is that most container workloads don't have identities at all. They run as "default" service accounts with broad permissions. They inherit node IAM roles. They use shared secrets mounted as volumes that every pod in the namespace can read.
 
-**The fix:** Every workload needs a cryptographic identity that is independent of the infrastructure. SPIFFE/SPIRE is the right direction, but it needs to be mandatory, not optional. At Good CISO, we're applying the same cryptographic identity model we use for AI agents ([https://github.com/GoodCISO/aware](https://github.com/GoodCISO/aware)AWARE) to container workloads, because the principle is the same: identity must be workload-bound, not node-bound.
+**The fix:** Every workload needs a cryptographic identity that is independent of the infrastructure. SPIFFE/SPIRE is the right direction, but it needs to be mandatory, not optional. At Good CISO, we're applying the same cryptographic identity model we use for AI agents ([AWARE](https://github.com/GoodCISO/aware)) to container workloads, because the principle is the same: identity must be workload-bound, not node-bound.
 
 ## Gap 3: The Supply Chain Is a Supply Tree (And Nobody Prunes It)
 
@@ -105,7 +105,7 @@ The container security gap is part of a larger pattern: security is still treate
 
 The solution is the same in every case: move from inspection to architecture. From scanning to constraints. From security as a process to security as a design property.
 
-That's what we built [https://github.com/GoodCISO/aware](https://github.com/GoodCISO/aware)AWARE for, not because containers and AI agents are the same, but because the security principle is the same. Every workload needs a cryptographic identity. Every action needs policy boundaries. Every decision needs to be traceable.
+That's what we built [AWARE](https://github.com/GoodCISO/aware) for, not because containers and AI agents are the same, but because the security principle is the same. Every workload needs a cryptographic identity. Every action needs policy boundaries. Every decision needs to be traceable.
 
 Whether you're running Kubernetes clusters or autonomous AI agents, the fundamentals don't change. The implementation does.
 
@@ -113,10 +113,10 @@ Whether you're running Kubernetes clusters or autonomous AI agents, the fundamen
 
 AWARE is the open-source compliance infrastructure for autonomous AI agents. T0-T4 constraint enforcement, cryptographic identity, and autonomous governance.
 
-[/demo](/demo)See the policy engine →
-[/book.html](/book.html)Book a Demo
+[See the policy engine →](/pricing/)
+[Book a Demo](/contact/)
 
-*Good CISO is building the security layer autonomous AI has been missing. Follow us on [https://linkedin.com/company/good-ciso](https://linkedin.com/company/good-ciso)LinkedIn or reach out at [https://goodciso.org](https://goodciso.org)goodciso.org.*
+*Good CISO is building the security layer autonomous AI has been missing. Follow us on [LinkedIn](https://linkedin.com/company/goodciso) or reach out at [goodciso.org](https://goodciso.org).*
     </div>
     <div class="gc-callout gc-mt-12">
       <strong>Talk to us about this</strong>

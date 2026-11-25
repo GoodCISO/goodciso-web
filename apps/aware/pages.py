@@ -564,8 +564,8 @@ npm start
 # Confirm it is alive
 curl -s localhost:3000/api/health</code></pre>
     <p class="gc-muted">The package requires a credential pepper. Without one the service refuses to start, which is the correct behaviour for a system that stores credentials.</p>
-    <pre class="gc-code"><code>export AWARE_CREDENTIAL_PEPPER="<your-pepper>"
-export SECRET_KEY="<your-secret>"</code></pre>
+    <pre class="gc-code"><code>export AWARE_CREDENTIAL_PEPPER="&lt;your-pepper&gt;"
+export SECRET_KEY="&lt;your-secret&gt;"</code></pre>
   </div>
   <div>
     <h2>Evaluate a tool call</h2>

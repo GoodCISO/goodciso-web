@@ -100,7 +100,35 @@ def extract(path: Path) -> tuple[str, str]:
     art = re.sub(r"</pre>", "\n```\n\n", art, flags=re.I)
     art = re.sub(r"<code[^>]*>", "`", art, flags=re.I)
     art = re.sub(r"</code>", "`", art, flags=re.I)
-    art = re.sub(r'<a[^>]*href="([^"]*)"[^>]*>', r"[\1](\1)", art, flags=re.I)
+    # The LinkedIn company URL was wrong in the legacy posts
+    # ("company/good-ciso"). The real page is "company/goodciso". Fix it
+    # here as well as at source, so a re-migration cannot reintroduce it.
+    art = art.replace("linkedin.com/company/good-ciso", "linkedin.com/company/goodciso")
+
+    # The legacy posts linked to pages of the OLD site that no longer
+    # exist. The mapping lives in insights_loader.LEGACY_LINK_FIXES,
+    # which is applied to the RENDERED html and is the correct layer for
+    # it: it can fix a link whatever produced it.
+    #
+    # It was previously duplicated here, and the two disagreed about the
+    # trailing slash, which is how an article ended up linking to
+    # "/contact" while the site serves "/contact/".
+    #
+    # The only correction needed here is the LinkedIn URL below.
+
+    # Links become markdown, KEEPING their label.
+    #
+    # This was `r"[\1](\1)"`, which replaced the link text with the URL.
+    # Every labelled link in the legacy posts therefore rendered as its
+    # own address: "building
+    # https://github.com/GoodCISO/aware AWARE". The label is the point of
+    # a link, so it is captured and restored.
+    art = re.sub(
+        r'<a[^>]*href="([^"]*)"[^>]*>(.*?)</a>',
+        lambda mm: f"[{mm.group(2).strip()}]({mm.group(1)})",
+        art,
+        flags=re.S | re.I,
+    )
     art = re.sub(r"<strong[^>]*>", "**", art, flags=re.I)
     art = re.sub(r"</strong>", "**", art, flags=re.I)
     art = re.sub(r"<em[^>]*>", "*", art, flags=re.I)
