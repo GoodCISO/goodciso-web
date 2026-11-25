@@ -234,6 +234,33 @@ code, kbd, pre { font-family: var(--gc-font-mono); font-size: 0.9em; }
 /* ---- Lists ---- */
 .gc-list { margin: 0 0 var(--gc-space-4); padding-left: var(--gc-space-5); }
 .gc-list li { margin-bottom: var(--gc-space-2); }
+
+/* Ordered lists. The design system had no ordered-list component, so
+   every numbered sequence on the site was rendered as a bold paragraph
+   with the number typed into it. That reads as prose, not as a sequence:
+   the numbers are not in the document structure, so a screen reader
+   announces "1. Prompt Injection..." as an ordinary sentence and the
+   numbering cannot be styled or re-numbered.
+
+   The marker is drawn with a counter rather than left to the UA, so the
+   number sits on the text baseline and the spacing is the token scale
+   rather than the browser default. */
+.gc-ol { margin: 0 0 var(--gc-space-5); padding-left: var(--gc-space-6); list-style: none; counter-reset: gc-ol; }
+.gc-ol > li { position: relative; margin-bottom: var(--gc-space-3); counter-increment: gc-ol; }
+.gc-ol > li::before {
+  content: counter(gc-ol) ".";
+  position: absolute;
+  left: calc(var(--gc-space-6) * -1);
+  width: calc(var(--gc-space-6) - var(--gc-space-2));
+  text-align: right;
+  color: var(--gc-accent-text);
+  font-weight: var(--gc-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+/* A sub-heading inside an ordered item: the title of the item, kept in
+   the heading role so the document outline still makes sense, but
+   visually part of the list rather than a separate block. */
+.gc-ol > li > strong:first-child { display: block; margin-bottom: var(--gc-space-1); }
 .gc-checklist { list-style: none; padding: 0; margin: 0; }
 .gc-checklist li { padding-left: var(--gc-space-6); position: relative; margin-bottom: var(--gc-space-2); }
 .gc-checklist li::before { content: "✓"; position: absolute; left: 0; color: var(--gc-accent-text); font-weight: var(--gc-weight-bold); }

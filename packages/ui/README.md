@@ -236,6 +236,7 @@ primary.
 | `gc-card` | A surface with a border and `--gc-space-6` padding |
 | `gc-eyebrow` | The small uppercase label above a heading |
 | `gc-list` | A bulleted list |
+| `gc-ol` | An ordered list. The marker is drawn with a counter, so the number sits on the text baseline and the spacing is the token scale rather than the browser default. An item's `strong` is its title and is displayed as a block above the body. |
 | `gc-checklist` | A list with a ✓ marker, in the accent colour |
 | `gc-code` | A code block on a dark surface, horizontally scrollable |
 | `gc-table` | A data table |
