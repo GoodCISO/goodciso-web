@@ -178,12 +178,18 @@ def deploy(site_id: str, directory: Path, token: str, message: str) -> dict:
     env["NETLIFY_AUTH_TOKEN"] = token
     env["NETLIFY_SITE_ID"] = site_id
 
+    # --prod is required: without it the CLI creates a deploy PREVIEW and
+    # leaves the production alias on the previous deploy. There is no API
+    # publish endpoint - POST /deploys/{id}/publish and
+    # POST /sites/{id}/deploys/{id}/publish both return 404 - so promotion
+    # has to go through the CLI.
     r = subprocess.run(
         [
             cli,
             "deploy",
             f"--dir={directory}",
             "--no-build",
+            "--prod",
             "--auth", token,
             "--message", message,
             f"--site={site_id}",
