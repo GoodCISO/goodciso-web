@@ -212,3 +212,44 @@ A check that fails the build if any of these regress:
 7. Read a production log and confirm the seven fields and nothing else.
 
 **Effort:** roughly two hours. **The measurement it unblocks is the precondition for every other decision** — including the Coframe question, which cannot be answered at all until we know our traffic.
+
+---
+
+## 7. What was actually delivered
+
+Verified live on 2026-11-25, after the plan was written.
+
+### The collector is on all four domains
+
+| Domain | `GET` (proves mounted) | `POST` | Log |
+|---|---|---|---|
+| goodciso.org | 405 | stored, count rising | `/tmp/corporate-analytics.ndjson` |
+| aware.goodciso.org | 405 | stored, count rising | `/tmp/aware-analytics.ndjson` |
+| docs.aware.goodciso.org | 405 | stored, count rising | `/tmp/docs-analytics.ndjson` |
+| demo.aware.goodciso.org | 405 | stored, count rising | `/tmp/demo-analytics.ndjson` |
+
+Four distinct log files: the sites never collide.
+
+### The privacy guarantee holds, and is enforced
+
+The stored event has exactly seven fields: `t`, `type`, `path`, `ref`, `src`, `form`, `w`. No IP, no user-agent, no cookie, no identifier. The QA build fails if the function or the client ever grows one.
+
+The build guard was negative-tested: removing the function from a deploy root, removing the `[functions]` block, adding an IP read, and stripping the site key each produce a failure.
+
+### Two things the plan did not anticipate
+
+**1. The Netlify API's zip deploy silently drops functions.** This was the hardest-won finding of the port. The artifact contained `netlify/functions/analytics.mjs`; the deploy reported success; `/.netlify/functions/analytics` answered 404 while the site itself answered 200. Three directory layouts were tried through the API and none deployed it. The CLI, given the same tree, worked first time.
+
+The deployment now goes through the CLI, with `--prod` so the production alias actually moves, and CI installs `netlify-cli@26` to match. The post-deploy verification asserts the function is mounted — a 405 on a GET proves it is there; a 404 proves it is not.
+
+**2. There is no API publish endpoint.** `POST /deploys/{id}/publish` and `POST /sites/{id}/deploys/{id}/publish` both return 404. Without `--prod` the CLI creates a deploy preview and leaves the production alias on the previous deploy — which is exactly what happened on the first attempt, with the function live on the preview URL and absent from goodciso.org.
+
+### What is deliberately not done
+
+- No reporting pipeline, dashboard or alerting. The `count` in each response is enough to prove it is working; the rest comes after there is data worth reporting.
+- No cross-site identifier between the four sites. A visitor moving from goodciso.org to aware.goodciso.org is not linkable, and that is correct for a product site that must not inherit the corporate site's tracking.
+- No change to the privacy notice beyond stating the facts, because the facts are unchanged from cofactor and the notice there already describes them.
+
+### The next step
+
+Now that the collector is live, the question the Coframe assessment could not answer becomes answerable: **what traffic does goodciso.org actually get?** Until there is a week of data, no experiment of any kind — ours, Coframe's, or anyone else's — can be evaluated.
