@@ -141,12 +141,24 @@ jobs:
           # The artifact carries dist/ and .deploy-hashes/, so extract into
           # the workspace root rather than into a subdirectory.
 
+      - name: Install the Netlify CLI
+        # deploy.py deploys through the CLI, not the API: the API's zip
+        # deploy silently drops Netlify Functions. A zip containing
+        # netlify/functions/analytics.mjs produced "No functions deployed"
+        # while the deploy reported success - so the collector would have
+        # quietly not existed, and nothing in the build would have said so.
+        run: npm install -g netlify-cli@26
+
       - name: Deploy to Netlify
         env:
           # The Netlify credential for the account that owns all four sites.
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run: |
           set -euo pipefail
+          # The CLI reads the token from the environment; it also takes it
+          # as --auth. Both are set so it cannot fall back to an
+          # interactive login, which would hang the runner.
+          export NETLIFY_AUTH_TOKEN
           failed=""
           for site in ${{ needs.build.outputs.deploy }}; do
             echo "--- $site ---"
@@ -173,3 +185,25 @@ jobs:
         # The same verifier used locally. It checks TLS, security headers,
         # robots, sitemaps and that every sitemap URL resolves.
         run: python3.12 verify_production.py
+
+      - name: Verify the analytics collector is mounted
+        # A GET on the function must answer 405, which proves it is
+        # mounted. A 404 proves it is not, and a 404 is exactly what the
+        # API's zip deploy produced while reporting success.
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          failed=""
+          for host in goodciso.org aware.goodciso.org docs.aware.goodciso.org demo.aware.goodciso.org; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "https://$host/.netlify/functions/analytics")
+            echo "$host -> $code"
+            if [ "$code" != "405" ]; then
+              echo "::error::$host has no analytics function mounted (HTTP $code, expected 405)"
+              failed="$failed $host"
+            fi
+          done
+          if [ -n "$failed" ]; then
+            echo "::error::the collector is not mounted on:$failed"
+            exit 1
+          fi
