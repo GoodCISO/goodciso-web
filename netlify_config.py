@@ -8,6 +8,7 @@ search equity thrown away, so the mapping is explicit rather than implied.
 """
 import json
 import os
+import shutil
 from pathlib import Path
 
 # The repository root is derived from this file's location, never hardcoded.
@@ -175,11 +176,53 @@ def toml_redirects(pairs):
     return "".join(out)
 
 
+# The first-party analytics collector is a Netlify Function. It has to be
+# declared in each site's config, and it has to live inside that site's
+# deploy root, because each site is an independent deployment with its own
+# function environment.
+FUNCTIONS_BLOCK = """
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+"""
+
+
 def write_site(key, name, extra=""):
+    """Assemble the deploy root for one site.
+
+    The layout is:
+
+        dist/<site>/                     the published site (publish = ".")
+        dist/<site>/netlify/functions/   the function
+        dist/<site>/netlify.toml         the config
+
+    Netlify's default functions location is
+    YOUR_BASE_DIRECTORY/netlify/functions, and with publish = "." the
+    base directory is the deploy root. So the function sits in
+    netlify/functions beside the site, not inside the publish directory.
+
+    The function is shipped by the Netlify CLI, not by the API's zip
+    deploy - see deploy.py. The API path silently reports "No functions
+    deployed" for a zip that contains the function.
+    """
     d = DIST / key
     if not d.exists():
         return None
-    cfg = f"[build]\n  publish = \".\"\n\n{BASE_HEADERS}{extra}"
+
+    # The function, with the site key substituted so the four sites never
+    # share a log file.
+    fn_src = ROOT / "netlify" / "functions" / "analytics.mjs"
+    if fn_src.exists():
+        fn_dir = d / "netlify" / "functions"
+        fn_dir.mkdir(parents=True, exist_ok=True)
+        fn_text = fn_src.read_text(encoding="utf-8").replace(
+            "__ANALYTICS_SITE__", key
+        )
+        (fn_dir / "analytics.mjs").write_text(fn_text, encoding="utf-8")
+
+    cfg = (
+        f"[build]\n  publish = \".\"\n\n{BASE_HEADERS}{extra}{FUNCTIONS_BLOCK}"
+    )
     (d / "netlify.toml").write_text(cfg, encoding="utf-8")
     return d
 

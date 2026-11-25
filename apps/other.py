@@ -592,6 +592,11 @@ CORPORATE = [
     <h2>Enquiry form</h2>
     <form name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" id="contact-form">
       <input type="hidden" name="form-name" value="contact">
+      <!-- Source attribution: where this enquiry came from. Filled
+           client-side from ?src= or the referrer, so a conversion can be
+           tied to the page and the message that produced it. Without it,
+           a submission is a conversion with no attribution. -->
+      <input type="hidden" name="source" id="contact-source" value="">
       <p style="display:none"><label>Do not fill this in: <input name="bot-field"></label></p>
       <div class="gc-grid" style="gap:var(--gc-space-4)">
         <div>

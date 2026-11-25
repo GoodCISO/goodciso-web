@@ -20,7 +20,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
+import subprocess
 import time
 import urllib.error
 import urllib.request
@@ -155,28 +157,78 @@ def ensure_site(key: str, cfg: dict, token: str, state: dict) -> str:
 
 
 def deploy(site_id: str, directory: Path, token: str, message: str) -> dict:
-    payload = zip_dir(directory)
-    st, res = api(
-        "POST",
-        f"{NETLIFY}/sites/{site_id}/deploys",
-        token,
-        raw=payload,
-        headers={"Content-Type": "application/zip"},
-    )
-    if st not in (200, 201):
-        print(f"  DEPLOY FAILED {st}: {str(res)[:400]}")
+    """Deploy through the Netlify CLI.
+
+    The API's zip deploy does NOT bundle Netlify Functions. Verified
+    2026-11-25: a zip containing netlify/functions/analytics.mjs and a
+    netlify.toml with a [functions] block produced "No functions deployed"
+    on a scratch site AND on the production corporate site. The same tree
+    through the CLI reported "Finished hashing 3 files and 1 functions",
+    deployed the function, and it answered 200.
+
+    The API path is kept for the deploy id and the rollback record, but the
+    CLI is what actually ships.
+    """
+    cli = shutil.which("netlify") or "/Users/alfie/.npm-global/bin/netlify"
+    if not Path(cli).exists():
+        print("  DEPLOY FAILED: the netlify CLI is not installed")
+        print("    npm install -g netlify-cli")
         return {}
-    deploy_id = res.get("id")
-    print(f"  deploy submitted: {deploy_id}")
-    # Poll until published
+    env = dict(os.environ)
+    env["NETLIFY_AUTH_TOKEN"] = token
+    env["NETLIFY_SITE_ID"] = site_id
+
+    r = subprocess.run(
+        [
+            cli,
+            "deploy",
+            f"--dir={directory}",
+            "--no-build",
+            "--auth", token,
+            "--message", message,
+            f"--site={site_id}",
+        ],
+        cwd=str(directory),
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+    out = (r.stdout + r.stderr)
+    if r.returncode != 0:
+        print(f"  DEPLOY FAILED (exit {r.returncode})")
+        for line in out.splitlines()[-12:]:
+            print("   ", line.strip()[:180])
+        return {}
+
+    deploy_id = ""
+    for line in out.splitlines():
+        if "Deploy URL" in line or "deploy_url" in line:
+            m = re.search(r"(https?://[a-z0-9-]+--[a-z0-9-]+\.netlify\.app)", line)
+            if m:
+                deploy_id = m.group(1)
+    for line in out.splitlines():
+        if "hashing" in line or "function" in line.lower() and "path" in line.lower():
+            print("  ", line.strip()[:160])
+
+    # The CLI reports the deploy url; the API gives the deploy record,
+    # which is what the rollback file needs.
+    st, d = api("GET", f"{NETLIFY}/sites/{site_id}/deploys?per_page=1", token)
+    latest = d[0] if isinstance(d, list) and d else {}
+    did = latest.get("id", "")
+    print(f"  deploy submitted: {did}")
     for _ in range(60):
         time.sleep(3)
-        st2, d = api("GET", f"{NETLIFY}/deploys/{deploy_id}", token)
-        state = (d.get("state") or {}).get("name") if isinstance(d.get("state"), dict) else d.get("state")
+        st2, dd = api("GET", f"{NETLIFY}/deploys/{did}", token)
+        state = (dd.get("state") or {}).get("name") if isinstance(dd.get("state"), dict) else dd.get("state")
         if state in ("ready", "error", "failed"):
             print(f"  deploy state: {state}")
-            return d
-    return d
+            for m in ((dd.get("summary") or {}).get("messages") or []):
+                t = (m.get("title") or "").lower()
+                if "function deployed" in t or "no functions" in t:
+                    print(f"    {m.get('title')}: {m.get('description')}")
+            return dd
+    return dd
 
 
 def attach_domain(site_id: str, domain: str, token: str):

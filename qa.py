@@ -29,6 +29,16 @@ BRAND_DIR = Path(__file__).parent.resolve() / "assets/brand"
 AWARE_SHIELD_SIGNATURE = "M12 2.5 4 6v6.2"
 
 
+def pub(site: str) -> Path:
+    """The published root of a site.
+
+    The deploy root holds the published site, the Netlify function under
+    netlify/, and netlify.toml. publish = ".", so the site's own files
+    are at the root.
+    """
+    return DIST / site
+
+
 def _header_logo_anchor(html: str) -> str | None:
     """The header's logo anchor, or None if the header has no logo.
 
@@ -129,7 +139,7 @@ class Page(HTMLParser):
 
 def page_files(site: str) -> list[Path]:
     root = DIST / site
-    return sorted(p for p in root.rglob("*.html"))
+    return sorted(p for p in pub(site).rglob("*.html"))
 
 
 # --- brand guard -------------------------------------------------------
@@ -292,12 +302,12 @@ def check_retired_assets(site: str) -> list[str]:
     if not root.exists():
         return errors
 
-    for page in sorted(root.rglob("*.html")):
+    for page in sorted(pub(site).rglob("*.html")):
         html = page.read_text(errors="ignore")
-        # Match the asset NAME as a whole, not as a substring. "favicon.ico"
-        # is a substring of the current "favicon-goodciso.ico", and
-        # "/favicon.ico" is a legitimate href for it, so a plain `in` test
-        # flagged every page.
+        # Match the asset NAME as a whole, not as a substring.
+        # "favicon.ico" is a substring of the current
+        # "favicon-goodciso.ico", and "/favicon.ico" is a legitimate href
+        # for it, so a plain `in` test flagged every page.
         referenced = set()
         for m in re.finditer(r'(?:href|src)="([^"]+)"', html):
             referenced.add(m.group(1).rsplit("/", 1)[-1])
@@ -306,6 +316,94 @@ def check_retired_assets(site: str) -> list[str]:
                 errors.append(
                     f"{site}: {page.relative_to(root)} references the retired "
                     f"asset {name} ({why})"
+                )
+    return errors
+
+
+def check_analytics() -> list[str]:
+    """The first-party collector must be deployed, declared and privacy-safe.
+
+    Three things can silently break: the function not shipping, its
+    config block going missing so it is never mounted, and the client
+    growing an identifier. The first two are invisible in a link check,
+    and the third would be invisible in every check.
+    """
+    errors: list[str] = []
+    fn_src = Path(__file__).resolve().parent / "netlify" / "functions" / "analytics.mjs"
+    if not fn_src.exists():
+        errors.append("the analytics function is not in the repository")
+        return errors
+
+    fn_text = fn_src.read_text(errors="ignore")
+    # Comments are stripped before the privacy check. The function
+    # documents that it does NOT record a user agent, and a check that
+    # matched the documentation would fail on the guarantee itself.
+    fn_code = re.sub(r"/\*.*?\*/", "", fn_text, flags=re.S)
+    fn_code = re.sub(r"//[^\n]*", "", fn_code)
+
+    # 1. It must record no identifier. This is the whole reason the
+    #    collector is acceptable on a security company's site.
+    for forbidden in (
+        "x-forwarded-for",
+        "req.ip",
+        "user-agent",
+        "userAgent",
+        "set-cookie",
+        "document.cookie",
+        "localStorage",
+        "sessionStorage",
+    ):
+        if forbidden.lower() in fn_code.lower():
+            errors.append(
+                f"the analytics function references {forbidden!r} - it must not "
+                f"record an identifier"
+            )
+
+    # 2. It must declare the function directory for every site.
+    for site in SITE_ROOTS:
+        root = DIST / site
+        if not root.exists():
+            continue
+        fn = root / "netlify" / "functions" / "analytics.mjs"
+        if not fn.exists():
+            errors.append(f"{site}: the analytics function is not in the deploy root")
+            continue
+        cfg = root / "netlify.toml"
+        if not cfg.exists() or "[functions]" not in cfg.read_text(errors="ignore"):
+            errors.append(
+                f"{site}: netlify.toml does not declare [functions] - the "
+                f"collector would not be mounted"
+            )
+        # Each site's copy must be self-identifying, so the four never
+        # share a log file.
+        if f'"{site}"' not in fn.read_text(errors="ignore"):
+            errors.append(
+                f"{site}: the deployed function does not carry the site key, so "
+                f"its log could collide with another site's"
+            )
+
+    # 3. Every page must load the client, and the client must set no
+    #    identifier.
+    for site in SITE_ROOTS:
+        root = DIST / site
+        if not root.exists():
+            continue
+        js = root / "assets" / "site.js"
+        if not js.exists():
+            errors.append(f"{site}: assets/site.js is missing")
+            continue
+        text = js.read_text(errors="ignore")
+        js_code = re.sub(r"//[^\n]*", "", text)
+        if "sendBeacon" not in text:
+            errors.append(f"{site}: the page does not send an analytics beacon")
+        if "netlify/functions/analytics" not in text:
+            errors.append(f"{site}: the beacon does not target the collector")
+        for forbidden in ("document.cookie", "localStorage.setItem('gc-id",
+                          "crypto.randomUUID", "Math.random"):
+            if forbidden in js_code:
+                errors.append(
+                    f"{site}: the analytics client uses {forbidden!r} - it must "
+                    f"not generate or persist an identifier"
                 )
     return errors
 
@@ -335,9 +433,10 @@ def check_redirect_shadows() -> list[str]:
     root = DIST / "corporate"
     if not root.exists():
         return errors
+    pub = root
 
     for source, target in pairs:
-        src_path = root / source.strip("/")
+        src_path = pub / source.strip("/")
         if src_path.exists() or (src_path / "index.html").exists():
             errors.append(
                 f"redirect {source} shadows a real page (it redirects to "
@@ -345,7 +444,7 @@ def check_redirect_shadows() -> list[str]:
                 f"they asked for"
             )
         # The target must also exist, or the redirect lands on a 404.
-        tgt = root / target.strip("/").rstrip("/")
+        tgt = pub / target.strip("/").rstrip("/")
         if not (tgt.exists() or (tgt / "index.html").exists()):
             errors.append(f"redirect {source} -> {target} has no target page")
     return errors
@@ -360,7 +459,7 @@ def check_brand(site: str) -> list[str]:
 
     if site == "corporate":
         # 1. The AWARE mark must not be served as the corporate favicon.
-        fav_png = root / "favicon.png"
+        fav_png = pub(site) / "favicon.png"
         if not fav_png.exists():
             errors.append("corporate: no /favicon.png — the corporate mark is missing")
         else:
@@ -379,7 +478,7 @@ def check_brand(site: str) -> list[str]:
         # carries a green ramp, which the corporate brand.css overrides.
         # Grepping the bytes would flag the shared layer forever; resolving
         # it catches the thing that actually reaches the screen.
-        assets = root / "assets"
+        assets = pub(site) / "assets"
         try:
             css = (assets / "tokens.css").read_text() + "\n" + (assets / "brand.css").read_text()
         except OSError:
@@ -424,7 +523,7 @@ def check_brand(site: str) -> list[str]:
                         )
     else:
         # 3. The AWARE sites must serve the AWARE mark.
-        fav = root / "favicon.svg"
+        fav = pub(site) / "favicon.svg"
         if not fav.exists():
             errors.append(f"{site}: no /favicon.svg — the AWARE mark is missing")
         elif b"22c55e" not in fav.read_bytes().lower():
@@ -438,7 +537,7 @@ def check_brand(site: str) -> list[str]:
     # The two cards are compared by CONTENT, not by filename: the build
     # copies each to /og.png, so the name is the same on every site and
     # only the bytes can tell them apart.
-    og = root / "og.png"
+    og = pub(site) / "og.png"
     if not og.exists():
         errors.append(f"{site}: no /og.png — the social card is missing")
     else:
@@ -531,12 +630,13 @@ def check_brand(site: str) -> list[str]:
 
 def check_site(site: str) -> dict:
     root = DIST / site
+    pub_root = pub(site)
     origin = SITE_ROOTS[site]
     errors, warnings = [], []
     pages = page_files(site)
 
     for pf in pages:
-        rel = pf.relative_to(root)
+        rel = pf.relative_to(pub_root)
         url = "/" if str(rel) == "index.html" else "/" + str(rel).replace("index.html", "").rstrip("/")
         html = pf.read_text(encoding="utf-8")
         p = Page()
@@ -579,7 +679,7 @@ def check_site(site: str) -> dict:
                 clean = href.split("#")[0].split("?")[0]
                 if not clean:
                     continue
-                target = (root / clean.lstrip("/"))
+                target = (pub_root / clean.lstrip("/"))
                 if clean.endswith("/"):
                     target = target / "index.html"
                 elif not target.suffix:
@@ -600,7 +700,7 @@ def check_site(site: str) -> dict:
         for href in p.icon_hrefs:
             if not href.startswith("/"):
                 continue
-            if not (root / href.lstrip("/")).exists():
+            if not (pub_root / href.lstrip("/")).exists():
                 errors.append(f"{url}: favicon {href} does not exist in the build")
 
         # --- Open Graph card ---
@@ -619,15 +719,15 @@ def check_site(site: str) -> dict:
                 errors.append(f"{url}: og:image points off-site: {src}")
                 continue
             path = src[len(origin):].lstrip("/")
-            if not path or not (root / path).exists():
+            if not path or not (pub_root / path).exists():
                 errors.append(f"{url}: og:image {src} does not exist in the build")
 
     # --- sitemap integrity ---
-    sm = root / "sitemap.xml"
+    sm = pub(site) / "sitemap.xml"
     if sm.exists():
         for loc in re.findall(r"<loc>(.*?)</loc>", sm.read_text()):
             path = loc.replace(origin, "").lstrip("/")
-            target = root / path if path else root / "index.html"
+            target = pub(site) / path if path else pub(site) / "index.html"
             if path and not target.exists():
                 target = root / path / "index.html"
             if not target.exists():
@@ -635,7 +735,7 @@ def check_site(site: str) -> dict:
     else:
         errors.append("no sitemap.xml")
 
-    if not (root / "robots.txt").exists():
+    if not (pub(site) / "robots.txt").exists():
         errors.append("no robots.txt")
 
     # --- brand ---
@@ -765,6 +865,14 @@ def main():
 
     # The component spec is a whole-repo check, not a per-site one: the layer
     # and its spec are shared by every site.
+    analytics_errors = check_analytics()
+    if analytics_errors:
+        print(f"[FAIL] analytics      {len(analytics_errors)} errors")
+        for e in analytics_errors[:25]:
+            print("    ERROR  ", e)
+    else:
+        print("[PASS] analytics      the collector ships, is declared, and records no identifier")
+
     shadow_errors = check_redirect_shadows()
     if shadow_errors:
         print(f"[FAIL] redirects     {len(shadow_errors)} errors")
@@ -781,7 +889,12 @@ def main():
     else:
         print("[PASS] component spec  every component in the layer is specified")
 
-    total_err = sum(len(r["errors"]) for r in all_res) + len(spec_errors) + len(shadow_errors)
+    total_err = (
+        sum(len(r["errors"]) for r in all_res)
+        + len(spec_errors)
+        + len(shadow_errors)
+        + len(analytics_errors)
+    )
     print(f"\nTOTAL ERRORS: {total_err}")
     return 1 if total_err else 0
 

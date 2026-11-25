@@ -159,6 +159,8 @@ def main() -> int:
     total = 0
     pages = 0
     for site in SITES:
+        # The published site is at the deploy root; the Netlify function and
+        # netlify.toml sit beside it.
         root = DIST / site
         if not root.exists():
             continue

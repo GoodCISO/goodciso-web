@@ -180,6 +180,103 @@ SITE_JS = r"""
       }
     });
   }
+
+  // ---------------------------------------------------------------------
+  // First-party analytics.
+  //
+  // No cookie, no localStorage, no identifier, no IP, no user-agent
+  // fingerprint. The collector stores the path, the referrer, the ?src=
+  // tag, the viewport width and a timestamp. There is nothing to
+  // consent to, because nothing identifies the visitor.
+  //
+  // sendBeacon is used first because it survives the page unloading,
+  // which a page view does. The fetch fallback carries keepalive for
+  // the same reason. Neither is awaited, so this cannot delay or
+  // break rendering, and neither has a path that can throw into the
+  // page.
+  //
+  // The endpoint is first-party and returns 405 for anything that is
+  // not a POST, so a request that reaches it is proof the function
+  // deployed.
+  // ---------------------------------------------------------------------
+  (function () {
+    if (window.__gcAnalytics) return;
+    window.__gcAnalytics = true;
+
+    var payload = {
+      p: location.pathname,
+      r: document.referrer || '',
+      s: (new URLSearchParams(location.search).get('src') || ''),
+      t: new Date().toISOString(),
+      w: window.innerWidth || 0
+    };
+
+    var body = JSON.stringify(payload);
+    var url = '/.netlify/functions/analytics';
+
+    try {
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(
+          url, new Blob([body], { type: 'application/json' })
+        );
+        return;
+      }
+    } catch (e) { /* fall through to fetch */ }
+
+    try {
+      fetch(url, {
+        method: 'POST',
+        body: body,
+        keepalive: true,
+        headers: { 'Content-Type': 'application/json' }
+      }).catch(function () {});
+    } catch (e) { /* an analytics failure must never break a page */ }
+
+    // The source attribution for a form submission: the ?src= tag if
+    // there is one, otherwise the referrer. Filled into the form's
+    // hidden field, so the value arrives with the enquiry itself and
+    // survives the redirect to the thank-you page.
+    try {
+      var srcField = document.getElementById('contact-source');
+      if (srcField && !srcField.value) {
+        var src = payload.s || payload.r;
+        if (src) srcField.value = src;
+      }
+    } catch (e) { /* attribution is not worth breaking a form for */ }
+
+    // A submission is the signal that matters most, and it is recorded
+    // as its own event type so a signup is never confused with a view.
+    // The Netlify form POST is not intercepted: the form must still
+    // work if this fails.
+    document.querySelectorAll('form[data-netlify="true"]').forEach(function (form) {
+      form.addEventListener('submit', function () {
+        try {
+          var name = form.getAttribute('name') || form.querySelector('[name="form-name"]');
+          var sub = {
+            p: location.pathname,
+            r: document.referrer || '',
+            s: (new URLSearchParams(location.search).get('src') || ''),
+            t: new Date().toISOString(),
+            w: window.innerWidth || 0,
+            form: name ? name.value : 'form'
+          };
+          var subBody = JSON.stringify(sub);
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon(
+              url, new Blob([subBody], { type: 'application/json' })
+            );
+          } else {
+            fetch(url, {
+              method: 'POST',
+              body: subBody,
+              keepalive: true,
+              headers: { 'Content-Type': 'application/json' }
+            }).catch(function () {});
+          }
+        } catch (e) { /* an analytics failure must never break a form */ }
+      });
+    });
+  })();
 })();
 """
 
