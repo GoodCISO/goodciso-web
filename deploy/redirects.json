@@ -7,11 +7,6 @@
         "status": 301
       },
       {
-        "from": "/pricing",
-        "to": "/services/regulatory-readiness",
-        "status": 301
-      },
-      {
         "from": "/book.html",
         "to": "/contact",
         "status": 301

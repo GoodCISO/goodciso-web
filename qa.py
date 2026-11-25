@@ -310,6 +310,47 @@ def check_retired_assets(site: str) -> list[str]:
     return errors
 
 
+def check_redirect_shadows() -> list[str]:
+    """No redirect may shadow a page that actually exists.
+
+    The legacy redirect table was written when the old site had no
+    /pricing page, so "/pricing" pointed at the page that had replaced it.
+    The new site HAS a /pricing/ page, and the redirect shadowed it: a
+    reader clicking "Pricing" in the navigation landed on Regulatory
+    Readiness instead, with no indication that anything was wrong.
+
+    The failure is silent and invisible in a link check, because the
+    link resolves - to the wrong page. This compares every redirect's
+    source path against the built pages and fails if one is a real page.
+    """
+    errors: list[str] = []
+    cfg = Path(__file__).resolve().parent / "netlify_config.py"
+    if not cfg.exists():
+        return errors
+    text = cfg.read_text()
+    pairs = re.findall(r'\("([^"]+)",\s*"([^"]+)",\s*\d+\)', text)
+    if not pairs:
+        return errors
+
+    root = DIST / "corporate"
+    if not root.exists():
+        return errors
+
+    for source, target in pairs:
+        src_path = root / source.strip("/")
+        if src_path.exists() or (src_path / "index.html").exists():
+            errors.append(
+                f"redirect {source} shadows a real page (it redirects to "
+                f"{target}) - readers following it never reach the page "
+                f"they asked for"
+            )
+        # The target must also exist, or the redirect lands on a 404.
+        tgt = root / target.strip("/").rstrip("/")
+        if not (tgt.exists() or (tgt / "index.html").exists()):
+            errors.append(f"redirect {source} -> {target} has no target page")
+    return errors
+
+
 def check_brand(site: str) -> list[str]:
     """Brand bleed between the corporate site and the AWARE product sites."""
     root = DIST / site
@@ -724,6 +765,14 @@ def main():
 
     # The component spec is a whole-repo check, not a per-site one: the layer
     # and its spec are shared by every site.
+    shadow_errors = check_redirect_shadows()
+    if shadow_errors:
+        print(f"[FAIL] redirects     {len(shadow_errors)} errors")
+        for e in shadow_errors[:25]:
+            print("    ERROR  ", e)
+    else:
+        print("[PASS] redirects     no redirect shadows a real page")
+
     spec_errors = check_component_spec()
     if spec_errors:
         print(f"[FAIL] component spec  {len(spec_errors)} errors")
@@ -732,7 +781,7 @@ def main():
     else:
         print("[PASS] component spec  every component in the layer is specified")
 
-    total_err = sum(len(r["errors"]) for r in all_res) + len(spec_errors)
+    total_err = sum(len(r["errors"]) for r in all_res) + len(spec_errors) + len(shadow_errors)
     print(f"\nTOTAL ERRORS: {total_err}")
     return 1 if total_err else 0
 

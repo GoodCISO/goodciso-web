@@ -21,8 +21,12 @@ DIST = ROOT / "dist"
 # ---------------------------------------------------------------------------
 CORPORATE_REDIRECTS = [
     # Live URL (old)                     -> New destination              Status
+    # NOTE: /pricing.html -> /services/regulatory-readiness is kept, because
+    # the old site's pricing page became that page. But "/pricing" must
+    # NOT redirect: the new site HAS a /pricing/ page, and the redirect
+    # was shadowing it. A reader clicking "Pricing" in the navigation was
+    # landing on Regulatory Readiness instead.
     ("/pricing.html", "/services/regulatory-readiness", 301),
-    ("/pricing", "/services/regulatory-readiness", 301),
     ("/book.html", "/contact", 301),
     ("/book", "/contact", 301),
     ("/services.html", "/services", 301),
