@@ -320,6 +320,62 @@ def check_retired_assets(site: str) -> list[str]:
     return errors
 
 
+def check_llms_files() -> list[str]:
+    """Every link in an llms.txt must resolve to a page that exists.
+
+    An llms.txt is read by machines, not people. A link to a page that
+    does not exist is not a broken link a reader will notice and skip -
+    it is an instruction the machine follows to a 404, and it makes the
+    whole file look unreliable.
+    """
+    errors: list[str] = []
+
+    # The site each llms.txt describes, so the links are resolved against
+    # the right build.
+    targets = {
+        "corporate": "corporate",
+        "aware": "aware",
+    }
+
+    # SITE_ROOTS holds full origins; the regex captures a bare host.
+    # Compare on the host alone, or the lookup never matches and the
+    # check passes vacuously.
+    host_to_build = {
+        v.split("//", 1)[-1].strip("/"): k for k, v in SITE_ROOTS.items()
+    }
+
+    for site, build in targets.items():
+        path = DIST / build / "llms.txt"
+        if not path.exists():
+            continue
+        text = path.read_text(errors="ignore")
+        # The path must not swallow the backtick that closes an inline
+        # code span, or every markdown link reads as a broken one.
+        for m in re.finditer(
+            r"https://([a-z0-9.\-]+)/([^\s)\]`]*[a-z0-9/.]|[a-z0-9])", text
+        ):
+            host, url_path = m.group(1), m.group(2)
+            # Only check links that point at a site we build.
+            build_name = host_to_build.get(host)
+            if build_name is None:
+                continue
+            root = DIST / build_name
+            if url_path in ("", "/"):
+                target = root / "index.html"
+            else:
+                target = root / url_path.strip("/")
+                if url_path.endswith("/"):
+                    target = root / url_path.strip("/") / "index.html"
+                elif not target.suffix:
+                    target = root / url_path.strip("/") / "index.html"
+            if not target.exists():
+                errors.append(
+                    f"{build}/llms.txt links to {url_path} which does not "
+                    f"exist in the build"
+                )
+    return errors
+
+
 def check_analytics() -> list[str]:
     """The first-party collector must be deployed, declared and privacy-safe.
 
@@ -865,6 +921,14 @@ def main():
 
     # The component spec is a whole-repo check, not a per-site one: the layer
     # and its spec are shared by every site.
+    llms_errors = check_llms_files()
+    if llms_errors:
+        print(f"[FAIL] llms.txt      {len(llms_errors)} errors")
+        for e in llms_errors[:20]:
+            print("    ERROR  ", e)
+    else:
+        print("[PASS] llms.txt      every link in it resolves to a built page")
+
     analytics_errors = check_analytics()
     if analytics_errors:
         print(f"[FAIL] analytics      {len(analytics_errors)} errors")
@@ -894,6 +958,7 @@ def main():
         + len(spec_errors)
         + len(shadow_errors)
         + len(analytics_errors)
+        + len(llms_errors)
     )
     print(f"\nTOTAL ERRORS: {total_err}")
     return 1 if total_err else 0

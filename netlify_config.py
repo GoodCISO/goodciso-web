@@ -269,6 +269,19 @@ def main():
         if src.exists():
             (d / f).write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
             copied.append(f)
+
+    # The AWARE product site gets its own llms.txt. The corporate one
+    # describes the COMPANY; a developer asking an assistant about AWARE
+    # needs the PRODUCT's guidance - what it does, what it does not do,
+    # and how not to misrepresent it. The two answer different questions,
+    # and a single file cannot answer both.
+    aware_llms = ROOT / "assets" / "site" / "llms-aware.txt"
+    aware_dir = DIST / "aware"
+    if aware_llms.exists() and aware_dir.exists():
+        (aware_dir / "llms.txt").write_text(
+            aware_llms.read_text(encoding="utf-8"), encoding="utf-8"
+        )
+        copied.append("aware/llms.txt")
     # .well-known/security.txt — RFC 9116. A security company that drops its
     # own disclosure contact has a credibility problem, and security researchers
     # look for it first.
